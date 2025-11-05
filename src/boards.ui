@@ -1,6 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Created with Cambalache 0.96.1 -->
 <interface>
+  <!-- interface-name boards.ui -->
   <requires lib="gio" version="2.0"/>
   <requires lib="gtk" version="4.18"/>
   <requires lib="libadwaita" version="1.4"/>
@@ -18,11 +19,14 @@
                 <property name="menu-model">primary_menu</property>
                 <property name="primary">True</property>
                 <property name="tooltip-text" translatable="yes">Main Menu</property>
+                <child>
+                  <menu/>
+                </child>
               </object>
             </child>
             <child>
               <object class="GtkButton" id="bd_button_add">
-                <property name="label">掲示板を追加</property>
+                <property name="label" translatable="yes">Add</property>
               </object>
             </child>
             <child>
@@ -33,24 +37,6 @@
                   </object>
                 </child>
               </object>
-            </child>
-            <child>
-              <menu id="primary_menu">
-                <section>
-                  <item>
-                    <attribute name="action">app.preferences</attribute>
-                    <attribute name="label" translatable="yes">_Preferences</attribute>
-                  </item>
-                  <item>
-                    <attribute name="action">app.shortcuts</attribute>
-                    <attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
-                  </item>
-                  <item>
-                    <attribute name="action">app.about</attribute>
-                    <attribute name="label" translatable="yes">_About Semboola</attribute>
-                  </item>
-                </section>
-              </menu>
             </child>
           </object>
         </child>
@@ -73,4 +59,14 @@
       </object>
     </child>
   </template>
+  <menu id="primary_menu">
+    <item>
+      <attribute name="action">app.preferences</attribute>
+      <attribute name="label" translatable="yes">_Preferences</attribute>
+    </item>
+    <item>
+      <attribute name="action">app.about</attribute>
+      <attribute name="label" translatable="yes">_About Semboola</attribute>
+    </item>
+  </menu>
 </interface>

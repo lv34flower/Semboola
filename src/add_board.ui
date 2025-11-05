@@ -13,7 +13,7 @@
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkLabel">
-            <property name="label">URLから板を追加</property>
+            <property name="label" translatable="yes">Add from URL</property>
             <property name="margin-top">6</property>
             <property name="natural-wrap-mode">word</property>
             <property name="vexpand">True</property>
@@ -30,7 +30,7 @@
         <child>
           <object class="GtkButton" id="bdadd_button_submit">
             <property name="halign">center</property>
-            <property name="label">追加</property>
+            <property name="label" translatable="yes">Submit</property>
             <property name="valign">center</property>
             <property name="vexpand">True</property>
           </object>

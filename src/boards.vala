@@ -122,7 +122,7 @@ public class BoardsView : Adw.NavigationPage {
 
         // 3) 削除ボタン（行末）
         var del = new Button.from_icon_name ("user-trash-symbolic");
-        del.tooltip_text = "削除";
+        del.tooltip_text = _("Remove");
         ui_state.bind_property ("edit-mode", del, "visible",
                                 BindingFlags.SYNC_CREATE);
 

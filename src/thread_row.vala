@@ -1,4 +1,4 @@
-/* window.vala
+/* thread_row.vala
  *
  * Copyright 2025 v34
  *
@@ -18,21 +18,21 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-using Gtk;
 using GLib;
-using Gdk;
 
-[GtkTemplate (ui = "/jp/lv34/Semboola/threads.ui")]
-public class ThreadsView : Adw.NavigationPage {
-    public ThreadsView (string url, string name) {
-        Object(
-            title:name
-        );
+[GtkTemplate (ui = "/jp/lv34/Semboola/thread_row.ui")]
+public class ThreadRow : Gtk.ListBoxRow {
+    public class ThreadsItem : Object {
+        public string title { get; set; }
+        public DateTime dtime { get; set; }
+        public double spd  { get; set; }
+        public int ress  { get; set; }
+
+        public ThreadsItem (string t, DateTime d, double s, int r) {
+            title=t;
+            dtime=d;
+            spd=s;
+            ress=r;
+        }
     }
-
-    static construct {
-        typeof (ThreadRow).ensure ();
-    }
-
-
 }

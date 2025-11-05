@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.96.1 -->
+<interface>
+  <!-- interface-name thread_row.ui -->
+  <requires lib="gtk" version="4.0"/>
+  <template class="ThreadRow" parent="GtkListBoxRow">
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkBox" id="BoardRow">
+            <child>
+              <object class="GtkLabel" id="tname">
+                <property name="css-name">title-3</property>
+                <property name="halign">start</property>
+                <property name="hexpand">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <child>
+              <object class="GtkLabel" id="dtime">
+                <property name="css-name">dim-label</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="spd">
+                <property name="css-name">dim-label</property>
+                <property name="halign">end</property>
+                <property name="hexpand">True</property>
+                <property name="justify">center</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="ress">
+                <property name="css-name">dim-label</property>
+                <property name="halign">end</property>
+                <property name="justify">center</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
