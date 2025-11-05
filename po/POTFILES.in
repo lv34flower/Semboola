@@ -1,0 +1,8 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+data/jp.lv34.Semboola.desktop.in
+data/jp.lv34.Semboola.metainfo.xml.in
+data/jp.lv34.Semboola.gschema.xml
+src/main.vala
+src/window.vala
+src/window.ui

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=semboola
+Exec=semboola
+Icon=jp.lv34.Semboola
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=GTK;
+StartupNotify=true
+DBusActivatable=true

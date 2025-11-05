@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
+<!-- Created with Cambalache 0.96.1 -->
+<cambalache-project version="0.96.0" target_tk="gtk-4.0">
+  <ui template-class="SemboolaWindow" filename="window.ui" sha256="5cf4fa66a5a6c2c4b8596d72bc51aba29651aa8b7f6e5cf4235c2f22b04f5144">
+    <requires>BoardsView</requires>
+  </ui>
+  <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="6f4d0a2d63208bbc32c212da7765d088b95f9bbbd129c91cdcda230a45c4fd7d"/>
+  <ui template-class="ThreadsView" filename="threads.ui" sha256="b443020b826ee43868ab3e5c10d03259adb9892df588f8afbf48469df5988ce2"/>
+  <ui template-class="BoardsView" filename="boards.ui" sha256="f9829395aa94d53482ac03ee0528e7f53b8ffc3e61d385c245d76b8ce4929378"/>
+  <ui>
+    <content><![CDATA[<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkBox" id="BoardRow"/>
+</interface>
+]]></content>
+  </ui>
+</cambalache-project>
