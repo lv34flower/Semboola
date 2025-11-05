@@ -1,3 +1,3 @@
-# semboola
+# Semboola
 
-A description of this project.
+スマートフォン向け専ブラです。
