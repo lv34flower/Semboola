@@ -19,6 +19,8 @@
  */
 
 using Adw;
+using GLib;
+
 
 Semboola.Application g_app;  // GLOBAL.
 
@@ -31,6 +33,16 @@ int main (string[] args) {
     var app = new Adw.Application ("com.lv34.Semboola", ApplicationFlags.FLAGS_NONE);
     var settings = Gtk.Settings.get_default ();
     settings.gtk_icon_theme_name = "Adwaita";
+
+    string data_dir = Environment.get_user_data_dir();
+
+        File dir = File.new_for_path (data_dir);
+
+        if (!dir.query_exists ()) {
+            dir.make_directory_with_parents ();
+        }
+
+        FiveCh.cookie = Path.build_filename (data_dir, "cookie.txt");
 
     g_app = new Semboola.Application ();
     return g_app.run (args);

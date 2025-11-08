@@ -18,7 +18,24 @@
             <property name="vexpand">True</property>
             <child>
               <object class="GtkListView" id="listview">
+                <property name="show-separators">True</property>
                 <property name="vexpand">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkActionBar">
+            <child>
+              <object class="GtkButton" id="threads_btn_reload">
+                <property name="halign">end</property>
+                <property name="hexpand">True</property>
+                <signal name="clicked" handler="on_reload_click"/>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">view-refresh-symbolic</property>
+                  </object>
+                </child>
               </object>
             </child>
           </object>

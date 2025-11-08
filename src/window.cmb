@@ -4,8 +4,8 @@
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
   <ui template-class="BoardsView" filename="boards.ui" sha256="c0df6cb6f1dc1d431540b0770cee4eb3bd1001ac9f554432c7a093573afef820"/>
   <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="bcc9bceb21cbd6520b08902bdfbffec0f89d4ace2766ba162e61d25558ffdfb8"/>
-  <ui template-class="ThreadsView" filename="threads.ui" sha256="b443020b826ee43868ab3e5c10d03259adb9892df588f8afbf48469df5988ce2"/>
-  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="49c7675cd2b1114f2c39b146bb7016dd1380e5b16afc81d078de8a4f12fa52ab"/>
+  <ui template-class="ThreadsView" filename="threads.ui" sha256="40708157e2e04957bb4e6fd8553e25541c28c37c0ef188a2cc36f36edbd9ea6c"/>
+  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="6251dad404f98b45c6b5cc0a971ef6d57d799e458f2726e19bc5951c287352d5"/>
   <ui template-class="SemboolaWindow" filename="window.ui" sha256="40cccb50e3b6a26c4329d6c9735f5e9415e9afef4a4c723e9bc32b8fdc8f03bf">
     <requires>BoardsView</requires>
   </ui>

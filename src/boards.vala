@@ -21,6 +21,7 @@
 using Gtk;
 using GLib;
 using Gdk;
+using Adw;
 
 // 編集中,.
 public class UiState : Object {
@@ -306,13 +307,13 @@ public class BoardsView : Adw.NavigationPage {
     }
 
     // ListStore からアイテムのインデックスを探す簡易ヘルパ
-    private int index_of (BoardsItem it) {
-        int n = (int) store.get_n_items ();
-        for (int i = 0; i < n; i++) {
-            if (store.get_item (i) == it) return i;
-        }
-        return -1;
-    }
+    // private int index_of (BoardsItem it) {
+    //     int n = (int) store.get_n_items ();
+    //     for (int i = 0; i < n; i++) {
+    //         if (store.get_item (i) == it) return i;
+    //     }
+    //     return -1;
+    // }
 
     private void on_row_activated (uint pos) {
         var item = (BoardsItem) store.get_item ((int)pos);
@@ -350,6 +351,7 @@ public class BoardsView : Adw.NavigationPage {
     public void show_error_toast (string message) {
         var toast = this.get_ancestor (typeof (Adw.ToastOverlay)) as Adw.ToastOverlay;
         if (toast == null) {
+            //print("type:%s\n", this.parent(). );
             return;
         }
         var t = new Adw.Toast (message);

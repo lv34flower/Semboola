@@ -3,6 +3,9 @@ using Soup;
 using Posix;
 
 namespace FiveCh {
+
+    string cookie;
+
     /** Represents one line in subject.txt */
     public class SubjectEntry : Object {
         public string threadkey { get; construct; }
@@ -13,6 +16,32 @@ namespace FiveCh {
 
         public SubjectEntry (string threadkey, string title, int count, string dat_url, string raw_line) {
             Object (threadkey: threadkey, title: title, count: count, dat_url: dat_url, raw_line: raw_line);
+        }
+
+        // --- Added: time & ikioi helpers ---
+        /** スレ作成UNIX秒（threadkeyをそのまま数値化。失敗時は0） */
+        public int64 creation_epoch {
+            get {
+                try { return int64.parse (threadkey); } catch (Error e) { return 0; }
+            }
+        }
+
+        /** UTCの作成日時 */
+        public DateTime creation_datetime_local () {
+            return new DateTime.from_unix_local (creation_epoch);
+        }
+
+        /** 現在時刻基準の勢い（レス/時）。(count ÷ 経過時間[時]) */
+        public double ikioi_per_hour_now () {
+            int64 now = (int64) (GLib.get_real_time () / 1000000);
+            return ikioi_per_hour_at (now);
+        }
+
+        /** 指定UNIX秒時点の勢い（レス/時）。時間差が0以下なら count を返す */
+        public double ikioi_per_hour_at (int64 now_epoch) {
+            double hours = ((double) (now_epoch - creation_epoch)) / 3600.0;
+            if (hours <= 0.0) return (double) count;
+            return ((double) count) / hours;
         }
     }
 
@@ -147,6 +176,7 @@ namespace FiveCh {
             var url = board.subject_url ();
             var bytes = yield send_get_bytes_async (url, board.user_agent, null, cancel);
             string __enc_tmp; var text = decode_text_guess_japanese (bytes, out __enc_tmp);
+            text = decode_numeric_entities (text);
             return parse_subject (text, board);
         }
 
@@ -156,6 +186,7 @@ namespace FiveCh {
             var bytes = yield send_get_bytes_async (url, board.user_agent, null, cancel);
             string __enc_tmp;
             var text = decode_text_guess_japanese (bytes, out __enc_tmp);
+            text = decode_numeric_entities (text);
             var map = new HashTable<string,string> (str_hash, str_equal);
             foreach (var line in text.split("\n")) {
                 if (line.strip ().length == 0) continue;
@@ -460,6 +491,42 @@ namespace FiveCh {
                 list.append (new SubjectEntry (key, title, count, dat_url, raw));
             }
             return list;
+        }
+
+        public static string decode_numeric_entities (string src) {
+            var regex = new GLib.Regex ("&#([0-9]+);");
+            var sb = new StringBuilder ();
+
+            MatchInfo mi;
+            int last_end = 0;
+
+            regex.match (src, 0, out mi);
+            while (mi.matches ()) {
+                int start_pos, end_pos;
+                mi.fetch_pos (0, out start_pos, out end_pos);
+
+                sb.append (src.substring (last_end, start_pos - last_end));
+
+                var num_str = mi.fetch (1);
+
+                try {
+                    uint code = (uint) int.parse (num_str);
+
+                    if (code <= 0x10FFFF) {
+                        sb.append (((unichar) code).to_string ());
+                    } else {
+                        sb.append (mi.fetch (0));
+                    }
+                } catch (Error e) {
+                    sb.append (mi.fetch (0));
+                }
+
+                last_end = end_pos;
+                mi.next ();
+            }
+
+            sb.append (src.substring (last_end));
+            return sb.str;
         }
     }
 }

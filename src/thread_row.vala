@@ -22,17 +22,25 @@ using GLib;
 
 [GtkTemplate (ui = "/jp/lv34/Semboola/thread_row.ui")]
 public class ThreadRow : Gtk.ListBoxRow {
+
+    [GtkChild] public unowned Gtk.Label tname;
+    [GtkChild] public unowned Gtk.Label dtime;
+    [GtkChild] public unowned Gtk.Label spd;
+    [GtkChild] public unowned Gtk.Label ress;
+
     public class ThreadsItem : Object {
         public string title { get; set; }
         public DateTime dtime { get; set; }
         public double spd  { get; set; }
         public int ress  { get; set; }
+        public string url { get; set; }
 
-        public ThreadsItem (string t, DateTime d, double s, int r) {
+        public ThreadsItem (string t, DateTime d, double s, int r, string u) {
             title=t;
             dtime=d;
             spd=s;
             ress=r;
+            url=u;
         }
     }
 }
