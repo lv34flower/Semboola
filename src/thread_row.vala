@@ -21,7 +21,7 @@
 using GLib;
 
 [GtkTemplate (ui = "/jp/lv34/Semboola/thread_row.ui")]
-public class ThreadRow : Gtk.ListBoxRow {
+public class ThreadRow : Gtk.Box {
 
     [GtkChild] public unowned Gtk.Label tname;
     [GtkChild] public unowned Gtk.Label dtime;
