@@ -1,0 +1,135 @@
+using GLib;
+using Gtk;
+using Pango;
+
+public enum SpanType {
+    NORMAL,
+    REPLY, // >>123
+    URL
+}
+
+public class Span : Object {
+    public string text;
+    public SpanType type;
+    public string? payload;   // REPLY: レス番号 / URL: href
+    public uint start_index;  // UTF-8バイトindex
+    public uint end_index;
+
+    public Span (string text, SpanType type, string? payload = null) {
+        this.text = text;
+        this.type = type;
+        this.payload = payload;
+    }
+
+    public bool contains (uint index) {
+        return index >= start_index && index < end_index;
+    }
+}
+
+/**
+ * GTK4: Gtk.Label は final なので継承不可。
+ * -> Gtk.Box を継承し、その中に Gtk.Label を1つ持つ実装。
+ *
+ * - set_spans() で Pango markup を組んで inner_label に流す
+ * - クリック位置→xy_to_index→Span 逆引きは inner_label の Layout を使用
+ */
+public class ClickableLabel : Gtk.Box {
+    private Gtk.Label inner_label;
+    private Gee.ArrayList<Span> spans = new Gee.ArrayList<Span> ();
+
+    public signal void span_left_clicked  (Span span);
+    public signal void span_right_clicked (Span span, double x, double y);
+
+    public ClickableLabel () {
+        Object (orientation: Gtk.Orientation.HORIZONTAL, spacing: 0);
+
+        inner_label = new Gtk.Label (null);
+        inner_label.use_markup = true;
+        inner_label.wrap = true;
+        inner_label.wrap_mode = Pango.WrapMode.WORD_CHAR;
+        inner_label.selectable = false;
+        inner_label.xalign = 0.0f;
+        inner_label.hexpand = true;
+        inner_label.vexpand = false;
+        this.append (inner_label);
+
+        // クリックジェスチャは inner_label に付与
+        var click = new Gtk.GestureClick ();
+        // 全ボタン対象
+        click.pressed.connect ((n_press, x, y) => {
+            uint button = click.get_current_button ();
+            var span = get_span_at (x, y);
+            if (span == null) return;
+
+            if (button == Gdk.BUTTON_PRIMARY) {
+                span_left_clicked (span);
+            } else if (button == Gdk.BUTTON_SECONDARY) {
+                span_right_clicked (span, x, y);
+            }
+        });
+        inner_label.add_controller (click);
+    }
+
+    public void set_spans (Gee.Iterable<Span> new_spans) {
+        spans.clear ();
+        var sb = new StringBuilder ();
+        uint index = 0;
+
+        foreach (var s in new_spans) {
+            s.start_index = index;
+
+            var esc = Markup.escape_text (s.text);
+
+            switch (s.type) {
+            case SpanType.REPLY:
+                // 青＋下線
+                sb.append (@"<span foreground='#3060ff'><u>$esc</u></span>");
+                break;
+            case SpanType.URL:
+                // 緑＋下線
+                sb.append (@"<span foreground='#208020'><u>$esc</u></span>");
+                break;
+            default:
+                sb.append (esc);
+                break;
+            }
+
+            // UTF-8バイト長（Gtk/Pangoの index と一致）
+            index += (uint) s.text.length;
+            s.end_index = index;
+            spans.add (s);
+        }
+
+        inner_label.set_markup (sb.str);
+    }
+
+    private Span? get_span_at (double x, double y) {
+        if (spans.size == 0)
+            return null;
+
+        var layout = inner_label.get_layout ();
+        if (layout == null)
+            return null;
+
+        int ox, oy;
+        inner_label.get_layout_offsets (out ox, out oy);
+
+        // GestureClick の x,y は inner_label 座標系(px)
+        int lx = (int) (x * Pango.SCALE) - ox;
+        int ly = (int) (y * Pango.SCALE) - oy;
+
+        int index, trailing;
+        if (!layout.xy_to_index (lx, ly, out index, out trailing))
+            return null;
+
+        uint uindex = (uint) index;
+
+        foreach (var s in spans) {
+            if (s.contains (uindex))
+                return s;
+        }
+        return null;
+    }
+}
+
+

@@ -22,6 +22,7 @@ using Gtk;
 using GLib;
 using Gdk;
 using Adw;
+using Gee;
 
 // 編集中,.
 public class UiState : Object {
@@ -147,53 +148,6 @@ public class BoardsView : Adw.NavigationPage {
 
         // listItemWidgetを取得
         var row_widget = (Gtk.Widget) hbox.get_parent ();
-
-        // --- DnD: DragSource（MOVE） ---
-        // var drag_source = new DragSource () { actions = Gdk.DragAction.MOVE };
-        // ドラッグはハンドルから開始できるよう、ハンドルに付ける（行全体でもOK）
-        // drag_icon.add_controller (drag_source);
-
-        // drag_source.prepare.connect (() => {
-            // ドラッグするのは「行の BoardsItem の参照」
-        //     var item = (BoardsItem) li.item;
-            // 値として運ぶ
-        //     return new Gdk.ContentProvider.for_value (item);
-        // });
-
-        // --- DnD: DropTarget（MOVE） ---
-        // var drop_target = new DropTarget (typeof (BoardsItem), Gdk.DragAction.MOVE);
-        // 行全体をドロップ領域に
-        // row_widget.add_controller (drop_target);
-
-        // 変に禁止マークを出さない
-        // drop_target.accept.connect ((fmt) => {
-            // ContentProvider.for_value(Object) なので Object を受け付ける
-            // 追加で fmt に RowItem が含まれるか厳密に見るなら：
-            // return fmt.contain_gtype(typeof(RowItem));
-        //     return true;
-        // });
-
-        // drop_target.drop.connect ((value, x, y) => {
-        //     var from_item = (BoardsItem) value;
-        //     int from = index_of (from_item);
-        //     uint to   = li.position;
-
-        //     var h = row_widget.get_allocated_height ();
-        //     bool above = (y < h / 2.0);
-        //     if (!above) to += 1;
-
-        //     if (from == -1 || to == -1) return false;
-        //     if (from < to) to -= 1;
-        //     if (from == to) return false;
-
-        //     var item = (BoardsItem) store.get_item (from);
-        //     store.remove (from);
-        //     store.insert (to, item);
-
-        //     row_widget.remove_css_class ("drop-above");
-        //     row_widget.remove_css_class ("drop-below");
-        //     return true;
-        // });
 
         // --- 削除ボタンで行を削除 ---
         del.clicked.connect (() => {

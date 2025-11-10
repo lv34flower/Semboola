@@ -176,7 +176,7 @@ namespace FiveCh {
             var url = board.subject_url ();
             var bytes = yield send_get_bytes_async (url, board.user_agent, null, cancel);
             string __enc_tmp; var text = decode_text_guess_japanese (bytes, out __enc_tmp);
-            text = decode_numeric_entities (text);
+            text = decode_html_entities (text);
             return parse_subject (text, board);
         }
 
@@ -186,7 +186,7 @@ namespace FiveCh {
             var bytes = yield send_get_bytes_async (url, board.user_agent, null, cancel);
             string __enc_tmp;
             var text = decode_text_guess_japanese (bytes, out __enc_tmp);
-            text = decode_numeric_entities (text);
+            text = decode_html_entities (text);
             var map = new HashTable<string,string> (str_hash, str_equal);
             foreach (var line in text.split("\n")) {
                 if (line.strip ().length == 0) continue;
@@ -493,8 +493,11 @@ namespace FiveCh {
             return list;
         }
 
-        public static string decode_numeric_entities (string src) {
-            var regex = new GLib.Regex ("&#([0-9]+);");
+
+        // &#9999;, &#x2713;, &gt; 等をデコード
+        public static string decode_html_entities (string src) {
+            // &...; 全体を1本で拾う
+            var regex = new GLib.Regex ("&(#x[0-9A-Fa-f]+|#[0-9]+|[A-Za-z]+);");
             var sb = new StringBuilder ();
 
             MatchInfo mi;
@@ -505,19 +508,71 @@ namespace FiveCh {
                 int start_pos, end_pos;
                 mi.fetch_pos (0, out start_pos, out end_pos);
 
+                // 直前までを追加
                 sb.append (src.substring (last_end, start_pos - last_end));
 
-                var num_str = mi.fetch (1);
+                // 中身だけ（& と ; を除いた部分）
+                var ent = mi.fetch (1);
+                unichar ch = 0;
+                bool replaced = false;
 
-                try {
-                    uint code = (uint) int.parse (num_str);
+                // 数値参照
+                if (ent[0] == '#') {
+                    try {
+                        uint code;
 
-                    if (code <= 0x10FFFF) {
-                        sb.append (((unichar) code).to_string ());
-                    } else {
-                        sb.append (mi.fetch (0));
+                        // 16進: &#xHHHH;
+                        if (ent.length >= 3 && (ent[1] == 'x' || ent[1] == 'X')) {
+                            // "x"以降を0x付きにしてparse（Valaのparseは0xプレフィックス対応）
+                            var hex = "0x" + ent.substring (2);
+                            code = (uint) int.parse (hex);
+                        } else {
+                            // 10進: &#NNNN;
+                            var dec = ent.substring (1);
+                            code = (uint) int.parse (dec);
+                        }
+
+                        if (code <= 0x10FFFF) {
+                            ch = (unichar) code;
+                            replaced = true;
+                        }
+                    } catch (Error e) {
+                        // 失敗時は replaced=false のまま
                     }
-                } catch (Error e) {
+                } else {
+                    // 名前付きエンティティ（必要なものだけ実装）
+                    switch (ent) {
+                    case "lt":
+                        ch = '<';
+                        replaced = true;
+                        break;
+                    case "gt":
+                        ch = '>';
+                        replaced = true;
+                        break;
+                    case "amp":
+                        ch = '&';
+                        replaced = true;
+                        break;
+                    case "quot":
+                        ch = '"';
+                        replaced = true;
+                        break;
+                    case "apos":
+                        ch = '\'';
+                        replaced = true;
+                        break;
+                    // 必要ならここに追記:
+                    // case "nbsp": ch = 0x00A0; break;
+                    default:
+                        break;
+                    }
+                }
+
+                if (replaced) {
+                    sb.append (ch.to_string ());
+                } else {
+                    // 変換できなければ元の &...; をそのまま残す
                     sb.append (mi.fetch (0));
                 }
 
@@ -525,8 +580,192 @@ namespace FiveCh {
                 mi.next ();
             }
 
+            // 残りを追加
             sb.append (src.substring (last_end));
             return sb.str;
         }
+
     }
+
+    public class DatLoader : Object {
+        private FiveCh.Client client;
+
+        public DatLoader () {
+            client = new FiveCh.Client ();
+        }
+
+        /**
+          * URL または dat URL から Board / threadkey を推定して1回分の DAT を取得。
+          */
+        public async Gee.ArrayList<ResRow.ResItem> load_from_url_async (string urlr, Cancellable? cancellable = null) throws Error {
+            string url = urlr.strip ();
+
+            string? board_key = FiveCh.Board.guess_board_key_from_url (url);
+            string? site_base = FiveCh.Board.guess_site_base_from_url (url);
+            if (board_key == null || site_base == null) {
+                throw new IOError.FAILED (_("Invalid URL"));
+            }
+
+            // threadkey 抜き出し
+            string? threadkey = guess_threadkey_from_url (url);
+            if (threadkey == null) {
+                throw new IOError.FAILED (_("Invalid URL"));
+            }
+
+            var board = new FiveCh.Board (site_base, board_key);
+
+            // 全体を一気に読む
+            var chunk = yield client.fetch_dat_async (board, threadkey, -1, cancellable);
+            return parse_dat_text (chunk.text);
+        }
+
+        private static string? guess_threadkey_from_url (string url) {
+            try {
+                MatchInfo mi;
+                // .../dat/1234567890.dat
+                var r_dat = new GLib.Regex ("/dat/([0-9]+)\\.dat");
+                if (r_dat.match (url, 0, out mi))
+                    return mi.fetch (1);
+
+                // .../read.cgi/board/1234567890/...
+                var r_read = new GLib.Regex ("/read\\.cgi/[^/]+/([0-9]+)/");
+                if (r_read.match (url, 0, out mi))
+                    return mi.fetch (1);
+            } catch (Error e) {
+            }
+            return null;
+        }
+
+        private static Gee.ArrayList<ResRow.ResItem> parse_dat_text (string text) {
+            var list = new Gee.ArrayList<ResRow.ResItem> ();
+            var lines = text.split ("\n");
+            uint idx = 1;
+
+            foreach (var raw_line in lines) {
+                var line = raw_line.strip ();
+                if (line.length == 0) continue;
+
+                // name<>mail<>date ID:xxxx<>body
+                var parts = line.split ("<>");
+                if (parts.length < 4) continue;
+
+                string name = parts[0];
+                string mail = parts[1];
+                string date_id = parts[2];
+                string body = parts[3];
+
+                string id = "";
+                // date_id から "ID:xxxxx" を抜く（簡易）
+                int pos = date_id.index_of ("ID:");
+                if (pos >= 0) {
+                    id = date_id.substring (pos + 3);
+                }
+
+                var post = new ResRow.ResItem (idx++, name, mail, date_id, id, body);
+                list.add (post);
+            }
+            return list;
+        }
+    }
+
+    /**
+     * DAT本文から Span 列を作成。
+     * - ">>123" を REPLY
+     * - "http(s)://..." を URL
+     * それ以外は NORMAL
+     */
+    public class SpanBuilder {
+
+        // Regex は遅延初期化（例外はここで握りつぶして null 許容）
+        private static GLib.Regex? _token_regex = null;
+
+        private static GLib.Regex? get_token_regex () {
+            if (_token_regex != null)
+                return _token_regex;
+
+            try {
+                // >>数字 or URL
+                _token_regex = new GLib.Regex (
+                    "(>>[0-9]+)|(https?://[^\\s<>\"']+)",
+                    GLib.RegexCompileFlags.CASELESS | GLib.RegexCompileFlags.MULTILINE
+                );
+            } catch (Error e) {
+                // 失敗した場合は null を保持しておく
+                _token_regex = null;
+            }
+            return _token_regex;
+        }
+
+        public static Gee.ArrayList<Span> build (string raw_body) {
+            var spans = new Gee.ArrayList<Span> ();
+
+            // DATの改行＆最低限のタグ処理
+            string body = raw_body
+                .replace ("<br>", "\n")
+                .replace ("<br />", "\n")
+                .replace ("<br/>", "\n");
+
+            try {
+                var tag_rx = new GLib.Regex ("<[^>]+>");
+                body = tag_rx.replace (body, -1, 0, "");
+            } catch (Error e) {
+                // タグ除去失敗時はそのまま
+            }
+
+            var token_rx = get_token_regex ();
+
+            // Regex生成に失敗していた場合は全部NORMALで返す
+            if (token_rx == null) {
+                if (body.length == 0) {
+                    return spans;
+                }
+                spans.add (new Span (body, SpanType.NORMAL));
+                return spans;
+            }
+
+            MatchInfo mi;
+            int last = 0;
+
+            token_rx.match (body, 0, out mi);
+            while (mi.matches ()) {
+                int start, end;
+                mi.fetch_pos (0, out start, out end);
+
+                if (start > last) {
+                    var plain = body.substring (last, start - last);
+                    if (plain.length > 0)
+                        spans.add (new Span (plain, SpanType.NORMAL));
+                }
+
+                var full = mi.fetch (0);
+                var g_reply = mi.fetch (1);
+                var g_url = mi.fetch (2);
+
+                if (g_reply != null && g_reply.length > 0) {
+                    string num = g_reply.substring (2);
+                    spans.add (new Span (full, SpanType.REPLY, num));
+                } else if (g_url != null && g_url.length > 0) {
+                    spans.add (new Span (full, SpanType.URL, full));
+                } else {
+                    spans.add (new Span (full, SpanType.NORMAL));
+                }
+
+                last = end;
+                mi.next ();
+            }
+
+            if (last < body.length) {
+                var tail = body.substring (last);
+                if (tail.length > 0)
+                    spans.add (new Span (tail, SpanType.NORMAL));
+            }
+
+            if (spans.size == 0 && body.length > 0) {
+                spans.add (new Span (body, SpanType.NORMAL));
+            }
+
+            return spans;
+        }
+    }
+
 }

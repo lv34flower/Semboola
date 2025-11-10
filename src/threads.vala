@@ -1,4 +1,4 @@
-/* window.vala
+/* threads.vala
  *
  * Copyright 2025 v34
  *
@@ -32,6 +32,9 @@ public class ThreadsView : Adw.NavigationPage {
 
     Semboola.Window win;
 
+    // 初期化フラグ
+    private bool initialized = false;
+
     private GLib.ListStore store = new GLib.ListStore (typeof (ThreadRow.ThreadsItem));
 
     [GtkChild]
@@ -54,6 +57,16 @@ public class ThreadsView : Adw.NavigationPage {
             var list_item = (Gtk.ListItem) obj;
             var row = new ThreadRow ();
             list_item.set_child (row);
+
+            // 行全体にクリックジェスチャを付与
+            var click = new Gtk.GestureClick ();
+            click.released.connect ((n_press, x, y) => {
+                if (n_press == 1) {
+                    // 現在の行位置を使ってアクティベーション発火
+                    listview.activate (list_item.position);
+                }
+            });
+            row.add_controller (click);
         });
 
         factory.bind.connect ((obj) => {
@@ -64,14 +77,11 @@ public class ThreadsView : Adw.NavigationPage {
             row.spd.set_text("%.01f".printf (t.spd*24));
             var fmt = _("%Y-%m-%d %H:%M:%S");
             row.dtime.set_text (t.dtime.format (fmt));
-            row.ress.set_text ("%5d".printf (t.ress));
+            row.ress.set_text ("%d".printf (t.ress));
         });
 
         listview.model = model;
         listview.factory = factory;
-
-        // 行がアクティブ化されたとき（pos は行番号）
-        // bd_list_boards.activate.connect (on_row_activated);
 
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
         this.shown.connect (() => {
@@ -80,21 +90,27 @@ public class ThreadsView : Adw.NavigationPage {
         });
     }
 
-    static construct {
+    construct {
         typeof (ThreadRow).ensure ();
+
+        // 行がアクティブ化されたとき（pos は行番号）
+        listview.activate.connect (on_row_activated);
     }
 
     // 最初の読み込み
     private async void init_load () {
-        this.title=_("Loading...");
+        if (initialized) {
+            return;
+        }
 
         yield reload();
 
-        this.title=name;
+        initialized = true;
     }
 
     // スレ一覧更新(非同期で呼ぶこと)
     private async void reload () {
+        this.title=_("Loading...");
         try {
             var board  = new FiveCh.Board(Board.guess_site_base_from_url (url), Board.guess_board_key_from_url (url));
             var client = new FiveCh.Client(FiveCh.cookie);
@@ -117,12 +133,25 @@ public class ThreadsView : Adw.NavigationPage {
         } catch (Error e) {
             win.show_error_toast (_("Invalid error."));
             return;
+        } finally {
+            this.title=name;
         }
     }
 
     [GtkCallback]
     private void on_reload_click () {
-        init_load.begin ();
+        reload.begin ();
     }
 
+    // 行クリック
+    private void on_row_activated (uint pos) {
+        var item = (ThreadRow.ThreadsItem) store.get_item ((int)pos);
+
+        // 次の画面へ遷移
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
+            return;
+        }
+        nav.push(new RessView (item.url, item.title));
+    }
 }

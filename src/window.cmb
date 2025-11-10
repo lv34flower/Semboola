@@ -3,10 +3,11 @@
 <!-- Created with Cambalache 0.96.1 -->
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
   <ui template-class="BoardsView" filename="boards.ui" sha256="6d9d50d1dc0c801c729a60a85b7c8502cab86b1ee027ec282ba81c71c1ef04dc"/>
-  <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="bcc9bceb21cbd6520b08902bdfbffec0f89d4ace2766ba162e61d25558ffdfb8"/>
-  <ui template-class="ThreadsView" filename="threads.ui" sha256="40708157e2e04957bb4e6fd8553e25541c28c37c0ef188a2cc36f36edbd9ea6c"/>
-  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="5d103ddee977f344c9b6beae3ba7663348cceb7c95cc39e9c37e6721b6fc0406"/>
+  <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="b1ac555fd0a031a732aae05f342fc2ed058b7d8e2fbe01ad24f3f4fe3e99620f"/>
+  <ui template-class="ThreadsView" filename="threads.ui" sha256="acdfe8702e64a40cbbca914201de75d90f57e037fa3c1d86502c183ff91f209f"/>
+  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="68d779c55f2ced2cca0b168f6784769b8e804cc3538b7ca9238764debd239c17"/>
   <ui template-class="SemboolaWindow" filename="window.ui" sha256="40cccb50e3b6a26c4329d6c9735f5e9415e9afef4a4c723e9bc32b8fdc8f03bf">
     <requires>BoardsView</requires>
   </ui>
+  <ui template-class="RessView" filename="ress.ui" sha256="e563a619539d46277228ca99d3d7acb2defe4f356dd4c1b7e150f2e4b2eb1b87"/>
 </cambalache-project>

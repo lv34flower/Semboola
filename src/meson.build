@@ -6,6 +6,9 @@ Semboola_sources = [
   'boards.vala',
   'threads.vala',
   'thread_row.vala',
+  'ress.vala',
+  'res_row.vala',
+  'clickable_label.vala',
   'net/fivech.vala',
   'net/db.vala',
 ]

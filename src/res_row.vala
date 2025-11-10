@@ -1,4 +1,4 @@
-/* thread_row.vala
+/* res_row.vala
  *
  * Copyright 2025 v34
  *
@@ -20,26 +20,23 @@
 
 using GLib;
 
-[GtkTemplate (ui = "/jp/lv34/Semboola/thread_row.ui")]
-public class ThreadRow : Gtk.Box {
-    [GtkChild] public unowned Gtk.Label tname;
-    [GtkChild] public unowned Gtk.Label dtime;
-    [GtkChild] public unowned Gtk.Label spd;
-    [GtkChild] public unowned Gtk.Label ress;
+public class ResRow : Gtk.Box {
+    public class ResItem : Object {
+        public uint index { get; construct; }
+        public string name { get; construct; }
+        public string mail { get; construct; }
+        public string date { get; construct; }
+        public string id { get; construct; }
+        public string body { get; construct; }
 
-    public class ThreadsItem : Object {
-        public string title { get; set; }
-        public DateTime dtime { get; set; }
-        public double spd  { get; set; }
-        public int ress  { get; set; }
-        public string url { get; set; }
-
-        public ThreadsItem (string t, DateTime d, double s, int r, string u) {
-            title=t;
-            dtime=d;
-            spd=s;
-            ress=r;
-            url=u;
+        public ResItem(uint index,
+                       string name,
+                       string mail,
+                       string date,
+                       string id,
+                       string body) {
+            Object(index: index, name: name, mail: mail, date: date, id: id, body: body);
         }
     }
 }
+
