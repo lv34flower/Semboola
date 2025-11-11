@@ -37,6 +37,16 @@ public class ResRow : Gtk.Box {
                        string body) {
             Object(index: index, name: name, mail: mail, date: date, id: id, body: body);
         }
+
+        // キャッシュ
+        private Gee.ArrayList<Span>? _spans;
+
+        public Gee.ArrayList<Span> get_spans () {
+            if (_spans == null) {
+                _spans = FiveCh.SpanBuilder.build (body);
+            }
+            return _spans;
+        }
     }
 }
 

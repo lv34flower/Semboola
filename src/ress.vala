@@ -35,6 +35,7 @@ public class RessView : Adw.NavigationPage {
     private DatLoader loader;
 
     private GLib.ListStore store = new GLib.ListStore (typeof (ResRow.ResItem));
+    private Gee.ArrayList<ResRow.ResItem> posts;
 
     // 初期化フラグ
     private bool initialized = false;
@@ -126,7 +127,7 @@ public class RessView : Adw.NavigationPage {
 
         header.set_markup (@"<b>$(post.index)</b> $safe_name  $safe_date$id_part");
 
-        var spans = SpanBuilder.build (post.body);
+        var spans = post.get_spans ();
         body.set_spans (spans);
     }
 
@@ -141,16 +142,61 @@ public class RessView : Adw.NavigationPage {
         initialized = true;
     }
 
+    private void rebuild_listbox_incremental () {
+        clear_listbox ();
+
+        int i = 0;
+        Idle.add (() => {
+            // 1回のIdleで何行作るか。環境次第で 10〜50 くらいに調整。
+            int chunk = 20;
+            for (int n = 0; n < chunk && i < posts.size; n++, i++) {
+                var post = posts[i];
+
+                var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
+                row_box.margin_top = 6;
+                row_box.margin_bottom = 6;
+                row_box.margin_start = 8;
+                row_box.margin_end = 8;
+
+                var header = new Gtk.Label (null);
+                header.use_markup = true;
+                header.xalign = 0.0f;
+                header.wrap = false;
+                header.ellipsize = Pango.EllipsizeMode.END;
+
+                var body = new ClickableLabel ();
+
+                set_post_widgets (post, header, body);
+
+                row_box.append (header);
+                row_box.append (body);
+
+                var row = new Gtk.ListBoxRow ();
+                row.set_child (row_box);
+                listview.append (row);
+            }
+
+            // まだ残ってれば次のIdleでもう少し作る
+            return i < posts.size;
+        });
+    }
+
+    private void clear_listbox () {
+        Gtk.Widget? child = listview.get_first_child ();
+        while (child != null) {
+            var next = child.get_next_sibling ();
+            listview.remove (child);
+            child = next;
+        }
+    }
+
     private async void reload () {
         this.title=_("Loading...");
         try {
             var cancellable = new Cancellable ();
-            var posts = yield loader.load_from_url_async (url, cancellable);
+            posts = yield loader.load_from_url_async (url, cancellable);
 
-            store.remove_all ();
-            foreach (var p in posts) {
-                store.append (p);
-            }
+            rebuild_listbox_incremental ();
         } catch (Error e) {
 
         } finally {
