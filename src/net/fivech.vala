@@ -649,16 +649,17 @@ namespace FiveCh {
                 var parts = line.split ("<>");
                 if (parts.length < 4) continue;
 
-                string name = parts[0];
-                string mail = parts[1];
-                string date_id = parts[2];
-                string body = parts[3];
+                string name = Client.decode_html_entities (parts[0]);
+                string mail = Client.decode_html_entities (parts[1]);
+                string date_id = Client.decode_html_entities (parts[2]);
+                string body = Client.decode_html_entities (parts[3]);
 
                 string id = "";
                 // date_id から "ID:xxxxx" を抜く（簡易）
                 int pos = date_id.index_of ("ID:");
                 if (pos >= 0) {
                     id = date_id.substring (pos + 3);
+                    date_id = date_id.substring (0, pos);
                 }
 
                 var post = new ResRow.ResItem (idx++, name, mail, date_id, id, body);

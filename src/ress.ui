@@ -24,7 +24,7 @@
           <object class="GtkScrolledWindow">
             <property name="vexpand">True</property>
             <child>
-              <object class="GtkListView" id="listview">
+              <object class="GtkListBox" id="listview">
                 <property name="show-separators">True</property>
                 <property name="vexpand">True</property>
               </object>

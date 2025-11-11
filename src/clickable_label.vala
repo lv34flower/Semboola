@@ -27,11 +27,7 @@ public class Span : Object {
 }
 
 /**
- * GTK4: Gtk.Label は final なので継承不可。
- * -> Gtk.Box を継承し、その中に Gtk.Label を1つ持つ実装。
- *
- * - set_spans() で Pango markup を組んで inner_label に流す
- * - クリック位置→xy_to_index→Span 逆引きは inner_label の Layout を使用
+    クリック可能ラベル
  */
 public class ClickableLabel : Gtk.Box {
     private Gtk.Label inner_label;

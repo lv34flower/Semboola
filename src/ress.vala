@@ -40,7 +40,7 @@ public class RessView : Adw.NavigationPage {
     private bool initialized = false;
 
     [GtkChild]
-    unowned Gtk.ListView listview;
+    unowned Gtk.ListBox listview;
 
     public RessView (string url, string name) {
         // Object(
@@ -52,17 +52,56 @@ public class RessView : Adw.NavigationPage {
 
         loader = new DatLoader ();
 
-        var selection = new Gtk.SingleSelection (store);
-        selection.autoselect = false;
-        selection.can_unselect = true;
+        // var selection = new Gtk.SingleSelection (store);
+        // selection.autoselect = false;
+        // selection.can_unselect = true;
 
-        var factory = new Gtk.SignalListItemFactory ();
-        factory.setup.connect (on_factory_setup);
-        factory.bind.connect (on_factory_bind);
+        // var factory = new Gtk.SignalListItemFactory ();
+        // factory.setup.connect (on_factory_setup);
+        // factory.bind.connect (on_factory_bind);
 
-        listview.model = selection;
-        listview.factory = factory;
+        // listview.model = selection;
+        // listview.factory = factory;
 
+
+        // bind_model 使用
+        listview.bind_model (store, (obj) => {
+            var post = (ResRow.ResItem) obj;
+
+            var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
+            row_box.margin_top = 6;
+            row_box.margin_bottom = 6;
+            row_box.margin_start = 8;
+            row_box.margin_end = 16;
+
+            var header = new Gtk.Label (null);
+            header.use_markup = true;
+            header.xalign = 0.0f;
+            header.wrap = true;
+            header.wrap_mode = Pango.WrapMode.WORD_CHAR;
+            //header.ellipsize = Pango.EllipsizeMode.END;
+
+            var body = new ClickableLabel ();
+
+            // ここで span イベント接続（ListView版と同じノリ）
+            body.span_left_clicked.connect ((span) => {
+                on_span_left_clicked (post, span);
+            });
+            body.span_right_clicked.connect ((span, x, y) => {
+                on_span_right_clicked (post, span, x, y, body);
+            });
+
+            // ★ここが抜けてた：中身を row_box に入れる
+            row_box.append (header);
+            row_box.append (body);
+
+            // 中身セット
+            set_post_widgets (post, header, body);
+
+            var row = new Gtk.ListBoxRow ();
+            row.set_child (row_box);
+            return row;
+        });
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
         this.shown.connect (() => {
             win = this.get_root() as Semboola.Window;
@@ -78,61 +117,15 @@ public class RessView : Adw.NavigationPage {
         // listview.activate.connect (on_row_activated);
     }
 
-    private void on_factory_setup (Gtk.SignalListItemFactory f, GLib.Object obj) {
-        var list_item = (Gtk.ListItem) obj;
-        var root = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
-        root.margin_top = 6;
-        root.margin_bottom = 6;
-        root.margin_start = 8;
-        root.margin_end = 8;
-
-        var header = new Gtk.Label (null);
-        header.use_markup = true;
-        header.xalign = 0.0f;
-        header.wrap = false;
-        header.ellipsize = Pango.EllipsizeMode.END;
-
-        var body = new ClickableLabel ();
-
-        // ListItem を逆引きできるよう紐付け
-        body.set_data<weak Gtk.ListItem> ("list-item", list_item);
-        body.span_left_clicked.connect ((span) => {
-            var li = body.get_data<Gtk.ListItem> ("list-item");
-            if (li == null) return;
-            var post = (ResRow.ResItem?) li.item;
-            if (post == null) return;
-            on_span_left_clicked (post, span);
-        });
-        body.span_right_clicked.connect ((span, x, y) => {
-            var li = body.get_data<Gtk.ListItem> ("list-item");
-            if (li == null) return;
-            var post = (ResRow.ResItem?) li.item;
-            if (post == null) return;
-            on_span_right_clicked (post, span, x, y, body);
-        });
-
-        root.append (header);
-        root.append (body);
-
-        list_item.set_child (root);
-    }
-
-    private void on_factory_bind (Gtk.SignalListItemFactory f, GLib.Object obj) {
-        var list_item = (Gtk.ListItem) obj;
-        var post = (ResRow.ResItem) list_item.get_item ();
-        var root = (Gtk.Box) list_item.get_child ();
-
-        var header = (Gtk.Label) root.get_first_child ();
-        var body = (ClickableLabel) header.get_next_sibling ();
-
-        // ヘッダ: 番号 太字 + 名前 + 日付(ID含む)
+    private void set_post_widgets (ResRow.ResItem post, Gtk.Label header, ClickableLabel body) {
         string safe_name = Markup.escape_text (post.name);
         string safe_date = Markup.escape_text (post.date);
-        string id_part = (post.id != "") ? @" <span foreground='#c03030'>ID:$((Markup.escape_text (post.id)))</span>" : "";
+        string id_part = (post.id != "")
+            ? @" <span foreground='#c03030'>ID:$(Markup.escape_text (post.id))</span>"
+            : "";
 
         header.set_markup (@"<b>$(post.index)</b> $safe_name  $safe_date$id_part");
 
-        // 本文をSpanに
         var spans = SpanBuilder.build (post.body);
         body.set_spans (spans);
     }
@@ -222,13 +215,13 @@ public class RessView : Adw.NavigationPage {
 
     private void scroll_to_post (uint index) {
         // ResRow.ResItem.index == 表示番号として検索
-        for (uint i = 0; i < store.get_n_items (); i++) {
-            var p = (ResRow.ResItem) store.get_item (i);
-            if (p.index == index) {
-                listview.scroll_to (i, Gtk.ListScrollFlags.NONE, null);
-                break;
-            }
-        }
+        // for (uint i = 0; i < store.get_n_items (); i++) {
+        //     var p = (ResRow.ResItem) store.get_item (i);
+        //     if (p.index == index) {
+        //         listview.scroll_to (i, Gtk.ListScrollFlags.NONE, null);
+        //         break;
+        //     }
+        // }
     }
 
     [GtkCallback]

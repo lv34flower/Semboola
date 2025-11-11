@@ -5,9 +5,9 @@
   <ui template-class="BoardsView" filename="boards.ui" sha256="6d9d50d1dc0c801c729a60a85b7c8502cab86b1ee027ec282ba81c71c1ef04dc"/>
   <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="b1ac555fd0a031a732aae05f342fc2ed058b7d8e2fbe01ad24f3f4fe3e99620f"/>
   <ui template-class="ThreadsView" filename="threads.ui" sha256="acdfe8702e64a40cbbca914201de75d90f57e037fa3c1d86502c183ff91f209f"/>
-  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="68d779c55f2ced2cca0b168f6784769b8e804cc3538b7ca9238764debd239c17"/>
+  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="9733ce2473b163dc5539e2b650cc68e82b41539178b11880330914d981a157f9"/>
   <ui template-class="SemboolaWindow" filename="window.ui" sha256="40cccb50e3b6a26c4329d6c9735f5e9415e9afef4a4c723e9bc32b8fdc8f03bf">
     <requires>BoardsView</requires>
   </ui>
-  <ui template-class="RessView" filename="ress.ui" sha256="e563a619539d46277228ca99d3d7acb2defe4f356dd4c1b7e150f2e4b2eb1b87"/>
+  <ui template-class="RessView" filename="ress.ui" sha256="71b109a988a282c1231f4c8ffa07215c5481756cff10d2be248a17dcd65e8e9c"/>
 </cambalache-project>
