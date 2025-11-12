@@ -30,12 +30,14 @@ public class Span : Object {
     クリック可能ラベル
  */
 public class ClickableLabel : Gtk.Box {
-    private Gtk.Label inner_label;
+    public Gtk.Label inner_label;
     private Gee.ArrayList<Span> spans = new Gee.ArrayList<Span> ();
 
     public signal void span_left_clicked  (Span span);
     public signal void span_right_clicked (Span span, double x, double y);
 
+
+    private bool _suppress_next_release = false;
     public ClickableLabel () {
         Object (orientation: Gtk.Orientation.HORIZONTAL, spacing: 0);
 
@@ -49,21 +51,34 @@ public class ClickableLabel : Gtk.Box {
         inner_label.vexpand = false;
         this.append (inner_label);
 
-        // クリックジェスチャは inner_label に付与
         var click = new Gtk.GestureClick ();
-        // 全ボタン対象
-        click.pressed.connect ((n_press, x, y) => {
-            uint button = click.get_current_button ();
+        click.set_button (0); // 0=全ボタン/タッチを受ける
+        click.released.connect ((n_press, x, y) => {
+            // ここでだけ起動する（pressed では何もしない）
             var span = get_span_at (x, y);
             if (span == null) return;
 
+            uint button = click.get_current_button ();
             if (button == Gdk.BUTTON_PRIMARY) {
-                span_left_clicked (span);
+                if (!this._suppress_next_release)  // 長押し直後の誤発火抑止
+                    span_left_clicked (span);
             } else if (button == Gdk.BUTTON_SECONDARY) {
                 span_right_clicked (span, x, y);
             }
+            this._suppress_next_release = false; // 毎回リセット
         });
         inner_label.add_controller (click);
+
+        // タッチの長押し＝右クリック相当
+        var longp = new Gtk.GestureLongPress ();
+        longp.pressed.connect ((x, y) => {
+            var span = get_span_at (x, y);
+            if (span == null) return;
+            // コンテキスト（右クリック相当）を発火
+            span_right_clicked (span, x, y);
+            // この長押しに続く "released" ではリンクを開かない
+            this._suppress_next_release = true;
+        });
     }
 
     public void set_spans (Gee.Iterable<Span> new_spans) {

@@ -40,6 +40,9 @@ public class RessView : Adw.NavigationPage {
     // 初期化フラグ
     private bool initialized = false;
 
+    // ここまでロード
+    private int res_count = 0;
+
     [GtkChild]
     unowned Gtk.ListBox listview;
 
@@ -66,43 +69,43 @@ public class RessView : Adw.NavigationPage {
 
 
         // bind_model 使用
-        listview.bind_model (store, (obj) => {
-            var post = (ResRow.ResItem) obj;
+        // listview.bind_model (store, (obj) => {
+            // var post = (ResRow.ResItem) obj;
 
-            var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
-            row_box.margin_top = 6;
-            row_box.margin_bottom = 6;
-            row_box.margin_start = 8;
-            row_box.margin_end = 16;
+            // var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
+            // row_box.margin_top = 6;
+            // row_box.margin_bottom = 6;
+            // row_box.margin_start = 8;
+            // row_box.margin_end = 16;
 
-            var header = new Gtk.Label (null);
-            header.use_markup = true;
-            header.xalign = 0.0f;
-            header.wrap = true;
-            header.wrap_mode = Pango.WrapMode.WORD_CHAR;
+            // var header = new Gtk.Label (null);
+            // header.use_markup = true;
+            // header.xalign = 0.0f;
+            // header.wrap = true;
+            // header.wrap_mode = Pango.WrapMode.WORD_CHAR;
             //header.ellipsize = Pango.EllipsizeMode.END;
 
-            var body = new ClickableLabel ();
+            // var body = new ClickableLabel ();
 
             // ここで span イベント接続（ListView版と同じノリ）
-            body.span_left_clicked.connect ((span) => {
-                on_span_left_clicked (post, span);
-            });
-            body.span_right_clicked.connect ((span, x, y) => {
-                on_span_right_clicked (post, span, x, y, body);
-            });
+            // body.span_left_clicked.connect ((span) => {
+            //     on_span_left_clicked (post, span);
+            // });
+            // body.span_right_clicked.connect ((span, x, y) => {
+            //     on_span_right_clicked (post, span, x, y, body);
+            // });
 
             // ★ここが抜けてた：中身を row_box に入れる
-            row_box.append (header);
-            row_box.append (body);
+            // row_box.append (header);
+            // row_box.append (body);
 
             // 中身セット
-            set_post_widgets (post, header, body);
+            // set_post_widgets (post, header, body);
 
-            var row = new Gtk.ListBoxRow ();
-            row.set_child (row_box);
-            return row;
-        });
+            // var row = new Gtk.ListBoxRow ();
+            // row.set_child (row_box);
+            // return row;
+        // });
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
         this.shown.connect (() => {
             win = this.get_root() as Semboola.Window;
@@ -143,10 +146,11 @@ public class RessView : Adw.NavigationPage {
     }
 
     private void rebuild_listbox_incremental () {
-        clear_listbox ();
+        //clear_listbox ();
 
-        int i = 0;
+        int i = res_count;
         Idle.add (() => {
+        // Timeout.add (100, () => { // 1000ms = 1sec
             // 1回のIdleで何行作るか。環境次第で 10〜50 くらいに調整。
             int chunk = 20;
             for (int n = 0; n < chunk && i < posts.size; n++, i++) {
@@ -161,12 +165,21 @@ public class RessView : Adw.NavigationPage {
                 var header = new Gtk.Label (null);
                 header.use_markup = true;
                 header.xalign = 0.0f;
-                header.wrap = false;
-                header.ellipsize = Pango.EllipsizeMode.END;
+                header.wrap = true;
+                header.wrap_mode = Pango.WrapMode.WORD_CHAR;
+                // header.ellipsize = Pango.EllipsizeMode.END;
 
                 var body = new ClickableLabel ();
 
+
                 set_post_widgets (post, header, body);
+
+                body.span_left_clicked.connect ((span) => {
+                    on_span_left_clicked (post, span);
+                });
+                body.span_right_clicked.connect ((span, x, y) => {
+                    on_span_right_clicked (post, span, x, y, body);
+                });
 
                 row_box.append (header);
                 row_box.append (body);
@@ -175,6 +188,8 @@ public class RessView : Adw.NavigationPage {
                 row.set_child (row_box);
                 listview.append (row);
             }
+
+            res_count = i;
 
             // まだ残ってれば次のIdleでもう少し作る
             return i < posts.size;
@@ -274,5 +289,4 @@ public class RessView : Adw.NavigationPage {
     private void on_reload_click () {
         reload.begin ();
     }
-
 }
