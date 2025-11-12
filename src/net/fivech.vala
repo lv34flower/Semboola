@@ -650,8 +650,8 @@ namespace FiveCh {
                 if (parts.length < 4) continue;
 
                 string name = Client.decode_html_entities (parts[0]);
-                string mail = Client.decode_html_entities (parts[1]);
-                string date_id = Client.decode_html_entities (parts[2]);
+                string mail = parts[1];
+                string date_id = parts[2];
                 string body = Client.decode_html_entities (parts[3]);
 
                 string id = "";
