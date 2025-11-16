@@ -327,6 +327,17 @@ public class RessView : Adw.NavigationPage {
     }
 
     [GtkCallback]
+    private void on_add_click () {
+        var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
+        var popup = new new_res (window, g_app, url);
+        popup.submitted.connect (() => {
+            // 終わったら再読み込み
+            this.reload.begin ();
+        });
+        popup.present ();
+    }
+
+    [GtkCallback]
     private void on_reload_click () {
         reload.begin ();
     }

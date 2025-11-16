@@ -9,6 +9,7 @@ Semboola_sources = [
   'thread_row.vala',
   'ress.vala',
   'res_row.vala',
+  'new_res.vala',
   'clickable_label.vala',
   'cookie_confirm.vala',
   'net/fivech.vala',

@@ -11,6 +11,17 @@
         <child>
           <object class="AdwHeaderBar" id="header">
             <property name="show-start-title-buttons">False</property>
+            <child>
+              <object class="GtkButton">
+                <property name="has-frame">False</property>
+                <signal name="clicked" handler="on_add_click"/>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">list-add-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
             <child type="end">
               <object class="GtkMenuButton">
                 <property name="halign">end</property>
