@@ -2,12 +2,14 @@
 <!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
 <!-- Created with Cambalache 0.96.1 -->
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
-  <ui template-class="BoardsView" filename="boards.ui" sha256="6d9d50d1dc0c801c729a60a85b7c8502cab86b1ee027ec282ba81c71c1ef04dc"/>
-  <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="b1ac555fd0a031a732aae05f342fc2ed058b7d8e2fbe01ad24f3f4fe3e99620f"/>
-  <ui template-class="ThreadsView" filename="threads.ui" sha256="acdfe8702e64a40cbbca914201de75d90f57e037fa3c1d86502c183ff91f209f"/>
-  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="9733ce2473b163dc5539e2b650cc68e82b41539178b11880330914d981a157f9"/>
+  <ui template-class="BoardsView" filename="boards.ui" sha256="df4efd8e9dd1fffec81f6c2c9a20bbd90a2c79e29fe880ae005da8890e06ca88"/>
+  <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="46687e1d4b0fc9ebd1bcdf256261fcf6497807e96899cff8ddec603cc386f63c"/>
+  <ui template-class="ThreadsView" filename="threads.ui" sha256="929493df8a36327f0ebd55479534941be13492decdfc81a9436fba83468be303"/>
+  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="d7c6ec87f3915b1e86be97cc825f116398a9caba923c6a25ecb992f55987043f"/>
+  <ui template-class="RessView" filename="ress.ui" sha256="270f4f9f73910863e9cfb697d4de4583a63c780751e23bb759e3e13af8d4cff3"/>
+  <ui template-class="new_thread" filename="new_thread.ui" sha256="aeb0c128c8647e36782f44c21bb5a5ac751c957e93ca84048f3a001b1285c126"/>
+  <ui template-class="cookie_confirm" filename="cookie_confirm.ui" sha256="d06d57733f79717b011bf2457597607ac85649c4e4b2e0c7d2eea68b2f801f6c"/>
   <ui template-class="SemboolaWindow" filename="window.ui" sha256="40cccb50e3b6a26c4329d6c9735f5e9415e9afef4a4c723e9bc32b8fdc8f03bf">
     <requires>BoardsView</requires>
   </ui>
-  <ui template-class="RessView" filename="ress.ui" sha256="71b109a988a282c1231f4c8ffa07215c5481756cff10d2be248a17dcd65e8e9c"/>
 </cambalache-project>

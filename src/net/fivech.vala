@@ -26,7 +26,7 @@ namespace FiveCh {
             }
         }
 
-        /** UTCの作成日時 */
+        /** Localの作成日時 */
         public DateTime creation_datetime_local () {
             return new DateTime.from_unix_local (creation_epoch);
         }
@@ -76,7 +76,6 @@ namespace FiveCh {
         public string site_base_url { get; construct; } // e.g. https://example.com/test/ read as site base
         public string board_key     { get; construct; } // e.g. "linux"
         public string user_agent    { get; set; default = default_browser_ua (); }
-        public string? cookie_path  { get; set; } // optional persistent jar path
 
         public Board (string site_base_url, string board_key) {
             Object (site_base_url: site_base_url, board_key: board_key);
@@ -154,6 +153,45 @@ namespace FiveCh {
 
     /** Main client wrapping libsoup3 */
     public class Client : Object {
+
+        // 投稿の結果
+        public enum PostPageKind {
+            OK,
+            ERROR,
+            CONFIRM
+        }
+
+        // 投稿の結果+メッセージ
+        public class PostResult : Object {
+            public PostPageKind kind                      { get; construct; }
+            public string       html                      { get; construct; }
+            public string?      title                     { get; construct; }
+            public string?      tag_2ch                   { get; construct; }
+            public string?      message                   { get; construct; }
+            public string?      error_message             { get; construct; }
+            public string?      confirm_message           { get; construct; }
+            public HashTable<string,string>? confirm_form { get; construct; }
+
+            public PostResult (PostPageKind kind,
+                               string html,
+                               string? title = null,
+                               string? tag_2ch = null,
+                               string? message = null,
+                               string? error_message = null,
+                               string? confirm_message = null,
+                               HashTable<string,string>? confirm_form = null) {
+                Object (kind: kind,
+                        html: html,
+                        title: title,
+                        tag_2ch: tag_2ch,
+                        message: message,
+                        error_message: error_message,
+                        confirm_message: confirm_message,
+                        confirm_form: confirm_form);
+            }
+        }
+
+
         public Session session { get; private set; }
         public CookieJar cookiejar { get; private set; }
 
@@ -246,6 +284,35 @@ namespace FiveCh {
          * Required fields: bbs, key (omit for new), MESSAGE; FROM/mail optional; subject for new thread.
          * Many servers expect CP932 (MS932); set options.charset = "UTF-8" if board supports UTF-8.
          */
+
+        public async PostResult post_with_analysis_async (Board board,
+                                                          string bbs,
+                                                          string? key,
+                                                          string message,
+                                                          string from = "",
+                                                          string mail = "",
+                                                          string? subject = null,
+                                                          PostOptions? options = null,
+                                                          Cancellable? cancel = null) throws Error {
+            PostOptions opts = options ?? new PostOptions ();
+
+            var form = new HashTable<string,string> (str_hash, str_equal);
+            if (subject != null) form["subject"] = subject;
+            form["FROM"]    = from;
+            form["mail"]    = mail;
+            form["MESSAGE"] = message;
+            if (key != null) form["key"] = key;
+            form["bbs"]     = bbs;
+            form["time"]    = ((int64) (get_real_time ()/1000000)).to_string ();
+            form["submit"]  = opts.submit_label;
+
+            string html = yield post_once_async (board, form, opts, cancel);
+
+            // HTML→PostResult
+            return analyze_post_html (html);
+        }
+
+
         public async string post_async (Board board,
                                        string bbs,
                                        string? key,
@@ -255,28 +322,30 @@ namespace FiveCh {
                                        string? subject = null,
                                        PostOptions? options = null,
                                        Cancellable? cancel = null) throws Error {
-            PostOptions opts;
-            if (options == null) {
-                opts = new PostOptions ();
-            } else {
-                opts = options;
-            }
+            PostOptions opts = options ?? new PostOptions ();
 
             var form = new HashTable<string,string> (str_hash, str_equal);
             if (subject != null) form["subject"] = subject;
-            form["FROM"]   = from;
-            form["mail"]   = mail;
+            form["FROM"]    = from;
+            form["mail"]    = mail;
             form["MESSAGE"] = message;
             if (key != null) form["key"] = key;
             form["bbs"]     = bbs;
             form["time"]    = ((int64) (get_real_time ()/1000000)).to_string ();
             form["submit"]  = opts.submit_label;
 
-            // Percent-encode per selected charset
+            return yield post_once_async (board, form, opts, cancel);
+        }
+
+
+        private async string post_once_async (Board board,
+                                              HashTable<string,string> form,
+                                              PostOptions opts,
+                                              Cancellable? cancel) throws Error {
             string encoded = urlencode_form (form, opts.charset);
 
             var msg = new Message ("POST", board.bbs_cgi_url ());
-            // Headers
+
             var ua = opts.user_agent_override ?? board.user_agent;
             msg.request_headers.replace ("User-Agent", ua);
             msg.request_headers.replace ("Content-Type", "application/x-www-form-urlencoded");
@@ -286,20 +355,306 @@ namespace FiveCh {
                     msg.request_headers.replace (k, v);
                 }
             }
-            // Body (NOTE: body must be raw bytes; do not assume UTF-8)
-            // We keep it as ASCII string since it's percent-encoded — safe in UTF-8 too.
+
             var bytes = bytes_from_string_ascii (encoded);
             msg.set_request_body_from_bytes ("application/x-www-form-urlencoded", bytes);
 
             var resp_bytes = yield session.send_and_read_async (msg, Priority.DEFAULT, cancel);
-            // 2ch互換はHTMLで応答することが多い。エラーメッセージ等をUTF-8推定→失敗なら日本語系にフォールバック。
-            string __enc_post; string text = decode_text_guess_japanese (resp_bytes, out __enc_post);
+
+            string __enc_post;
+            string text = decode_text_guess_japanese (resp_bytes, out __enc_post);
 
             var status = msg.get_status ();
             if (!(status == 200 || status == 301 || status == 302)) {
-                throw new IOError.FAILED ("POST failed: %u — %s\n%s".printf ((uint) status, msg.get_reason_phrase (), text));
+                throw new IOError.FAILED ("POST failed: %u — %s\n%s"
+                    .printf ((uint) status, msg.get_reason_phrase (), text));
             }
+            print(text);
             return text;
+        }
+
+        // HTML から ERROR: ～ を1行抜き出して返す。なければ null。
+        private static string? extract_error_message (string html) {
+            try {
+                // <br> やタグをいったんざっくり落としてから探す
+                string plain = strip_tags (html);
+                plain = plain.replace ("<br>", "\n").replace ("<br />", "\n").replace ("<br/>", "\n");
+
+                MatchInfo mi;
+                var rx = new GLib.Regex ("ERROR[:：].*", GLib.RegexCompileFlags.CASELESS);
+                if (rx.match (plain, 0, out mi)) {
+                    var line = mi.fetch (0);
+                    return line.strip ();
+                }
+            } catch (Error e) {
+            }
+            return null;
+        }
+
+        // attr_name="..." / attr_name='...' を抜く簡易ヘルパ
+        private static string? extract_attr (string tag, string attr_name) {
+        try {
+            MatchInfo mi;
+            var rx1 = new GLib.Regex ("\\b%s\\s*=\\s*'([^']*)'".printf (attr_name),
+                                      GLib.RegexCompileFlags.CASELESS);
+            if (rx1.match (tag, 0, out mi))
+                return mi.fetch (1);
+
+            var rx2 = new GLib.Regex ("\\b%s\\s*=\\s*'([^']*)'".printf (attr_name),
+                                      GLib.RegexCompileFlags.CASELESS);
+            if (rx2.match (tag, 0, out mi))
+                return mi.fetch (1);
+        } catch (Error e) {
+        }
+        return null;
+    }
+
+        // 確認画面の <form> の中から hidden / textarea 等の値を抜き出して HashTable にする。
+        private static HashTable<string,string>? extract_confirm_form (string html) {
+            try {
+                MatchInfo mi;
+                // 最初の <form>...</form> を対象にする（本物の確認フォーム1つだけ想定）
+                var form_rx = new GLib.Regex ("<form[^>]*>(.*?)</form>",
+                                              GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
+                if (!form_rx.match (html, 0, out mi))
+                    return null;
+
+                string form_html = mi.fetch (1);
+                var map = new HashTable<string,string> (str_hash, str_equal);
+
+                // input タグを走査
+                MatchInfo mi_input;
+                var input_rx = new GLib.Regex ("<input[^>]+>",
+                                               GLib.RegexCompileFlags.CASELESS);
+                input_rx.match (form_html, 0, out mi_input);
+                while (mi_input.matches ()) {
+                    string tag = mi_input.fetch (0);
+
+                    string? name  = extract_attr (tag, "name");
+                    if (name == null || name == "") {
+                        mi_input.next ();
+                        continue;
+                    }
+
+                    string? type  = extract_attr (tag, "type");
+                    string? value = extract_attr (tag, "value") ?? "";
+
+                    string type_l = type != null ? type.down () : "";
+
+                    // submit はラベルとして扱う。それ以外はそのままフィールドに入れる。
+                    if (type_l == "submit") {
+                        map["submit"] = value.length > 0 ? value : "書き込む";
+                    } else {
+                        map[name] = value;
+                    }
+
+                    mi_input.next ();
+                }
+
+                // textarea も拾う（MESSAGE などが入る可能性を考慮）
+                MatchInfo mi_textarea;
+                var ta_rx = new GLib.Regex ("<textarea[^>]*name\\s*=\\s*\"([^\"]*)\"[^>]*>(.*?)</textarea>",
+                                            GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
+                ta_rx.match (form_html, 0, out mi_textarea);
+                while (mi_textarea.matches ()) {
+                    string name = mi_textarea.fetch (1);
+                    string val  = mi_textarea.fetch (2);
+                    map[name] = decode_html_entities (val);
+                    mi_textarea.next ();
+                }
+
+                if (map.size () == 0)
+                    return null;
+
+                return map;
+            } catch (Error e) {
+            }
+            return null;
+        }
+
+        public static PostResult analyze_post_html (string html) {
+            string title = "";
+            string tag_2ch = "";
+            string msg = "";
+            string conf = "";
+            string? errmsg = null;
+
+            try {
+                MatchInfo mi;
+
+                // <title>...</title>
+                var rx_title = new GLib.Regex (".*<title>([^<]*)</title>.*",
+                                               GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
+                if (rx_title.match (html, 0, out mi)) {
+                    title = mi.fetch (1).strip ();
+                }
+
+                // 2ch_X: 〜 -->
+                var rx_tag = new GLib.Regex (".*2ch_X:([^\\-]*)\\-\\->.*",
+                                             GLib.RegexCompileFlags.DOTALL);
+                if (rx_tag.match (html, 0, out mi)) {
+                    tag_2ch = mi.fetch (1).strip ();
+                }
+
+                // 一番内側の <b>〜</b> を雑に1つ拾う（JDimほど厳密ではない）
+                var rx_b = new GLib.Regex ("<b>([^<]*)</b>",
+                                           GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
+                if (rx_b.match (html, 0, out mi)) {
+                    errmsg = mi.fetch (1).strip ();
+                }
+
+                // まだ errmsg が空で tag_2ch に error があれば error --> ...</body> を拾ってみる
+                if ((errmsg == null || errmsg == "") && tag_2ch.down ().contains ("error")) {
+                    var rx_err2 = new GLib.Regex ("error +-->(.*)</body>",
+                                                  GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
+                    if (rx_err2.match (html, 0, out mi)) {
+                        errmsg = mi.fetch (1).strip ();
+                    }
+                }
+
+                // さらに title に error があれば <h4>..</h4> を見る
+                if ((errmsg == null || errmsg == "") && title.down ().contains ("error")) {
+                    var rx_h4 = new GLib.Regex ("<h4>(.*)</h4>",
+                                                GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
+                    if (rx_h4.match (html, 0, out mi)) {
+                        errmsg = mi.fetch (1).strip ();
+                    }
+                }
+
+                // フォント赤文字の「書き込み確認」文言
+                var rx_conf = new GLib.Regex (".*<font size=\\+1 color=#FF0000>([^<]*)</font>.*",
+                                              GLib.RegexCompileFlags.DOTALL);
+                if (rx_conf.match (html, 0, out mi)) {
+                    conf = mi.fetch (1).strip ();
+                }
+
+                // 本文メッセージ（JDimの </ul>.*<b>..</b> に近い場所を雑に拾う）
+                var rx_msg = new GLib.Regex (".*</ul>.*<b>(.*)</b>.*<form.*",
+                                             GLib.RegexCompileFlags.DOTALL);
+                if (rx_msg.match (html, 0, out mi)) {
+                    msg = mi.fetch (1).strip ();
+                }
+            } catch (Error e) {
+                // 解析失敗時はそのまま fall-through
+            }
+
+            // ERROR: プレーンテキストを優先的に拾う
+            string? err2 = extract_error_message (html);
+            if (err2 != null && err2 != "") {
+                errmsg = err2;
+            }
+
+            bool has_error = (errmsg != null && errmsg != "");
+
+            // 「書きこみました」 or 2ch_X に true → 成功扱い
+            bool looks_success =
+                (title.contains ("書きこみました") ||
+                 tag_2ch.down ().contains ("true"));
+
+            // 「書き込み確認」「cookie」など → 確認画面っぽい
+            bool looks_confirm =
+                title.contains ("書き込み確認") ||
+                conf.contains ("書き込み確認") ||
+                tag_2ch.down ().contains ("cookie");
+
+            // 確認フォーム（必要なときだけパース）
+            HashTable<string,string>? confirm_form = null;
+            if (looks_confirm) {
+                confirm_form = parse_confirm_form (html);
+            }
+
+            if (looks_confirm) {
+                return new PostResult (PostPageKind.CONFIRM,
+                                       html,
+                                       title,
+                                       tag_2ch,
+                                       msg,
+                                       errmsg,
+                                       conf,
+                                       confirm_form);
+            }
+
+            if (has_error && !looks_success) {
+                return new PostResult (PostPageKind.ERROR,
+                                       html,
+                                       title,
+                                       tag_2ch,
+                                       msg,
+                                       errmsg,
+                                       conf,
+                                       null);
+            }
+
+            // どちらでもなければOK扱い（細かい判定は必要に応じて増やす）
+            return new PostResult (PostPageKind.OK,
+                                   html,
+                                   title,
+                                   tag_2ch,
+                                   msg,
+                                   null,
+                                   conf,
+                                   null);
+        }
+
+        public static HashTable<string,string>? parse_confirm_form (string html) {
+            try {
+                MatchInfo mi;
+                var form_rx = new GLib.Regex ("<form[^>]*>(.*?)</form>",
+                                              GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
+                if (!form_rx.match (html, 0, out mi))
+                    return null;
+
+                string form_html = mi.fetch (1);
+                var map = new HashTable<string,string> (str_hash, str_equal);
+
+                // input タグ群
+                MatchInfo mi_input;
+                var input_rx = new GLib.Regex ("<input[^>]+>",
+                                               GLib.RegexCompileFlags.CASELESS);
+                input_rx.match (form_html, 0, out mi_input);
+                while (mi_input.matches ()) {
+                    string tag = mi_input.fetch (0);
+
+                    string? name  = extract_attr (tag, "name");
+                    if (name == null || name == "") {
+                        mi_input.next ();
+                        continue;
+                    }
+
+                    string? type  = extract_attr (tag, "type");
+                    string? value = extract_attr (tag, "value") ?? "";
+
+                    string type_l = type != null ? type.down () : "";
+
+                    if (type_l == "submit") {
+                        // サーバ側が期待する submit ラベル
+                        map["submit"] = value.length > 0 ? value : "書き込む";
+                    } else {
+                        map[name] = value;
+                    }
+
+                    mi_input.next ();
+                }
+
+                // textarea も拾う（MESSAGE など）
+                MatchInfo mi_textarea;
+                var ta_rx = new GLib.Regex ("<textarea[^>]*name\\s*=\\s*\"([^\"]*)\"[^>]*>(.*?)</textarea>",
+                                            GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
+                ta_rx.match (form_html, 0, out mi_textarea);
+                while (mi_textarea.matches ()) {
+                    string name = mi_textarea.fetch (1);
+                    string val  = mi_textarea.fetch (2);
+                    map[name] = decode_html_entities (val);
+                    mi_textarea.next ();
+                }
+
+                if (map.size () == 0)
+                    return null;
+
+                return map;
+            } catch (Error e) {
+            }
+            return null;
         }
 
         // From any 5ch-like URL, fetch board title (BBS_TITLE in SETTING.TXT).
@@ -619,7 +974,7 @@ namespace FiveCh {
             return parse_dat_text (chunk.text);
         }
 
-        private static string? guess_threadkey_from_url (string url) {
+        public static string? guess_threadkey_from_url (string url) {
             try {
                 MatchInfo mi;
                 // .../dat/1234567890.dat

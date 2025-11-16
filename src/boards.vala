@@ -203,7 +203,6 @@ public class BoardsView : Adw.NavigationPage {
         var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
         var popup = new AddBoardWindow (window, g_app);
         popup.submitted.connect ((text) => {
-            // ここで好きなメソッドを呼ぶ
             this.add_bbs_list (text);
         });
         popup.present ();

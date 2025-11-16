@@ -18,6 +18,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+using Gtk;
 using Adw;
 using GLib;
 
@@ -36,13 +37,13 @@ int main (string[] args) {
 
     string data_dir = Environment.get_user_data_dir();
 
-        File dir = File.new_for_path (data_dir);
+    File dir = File.new_for_path (data_dir);
 
-        if (!dir.query_exists ()) {
-            dir.make_directory_with_parents ();
-        }
+    if (!dir.query_exists ()) {
+        dir.make_directory_with_parents ();
+    }
 
-        FiveCh.cookie = Path.build_filename (data_dir, "cookie.txt");
+    FiveCh.cookie = Path.build_filename (data_dir, "cookie.txt");
 
     g_app = new Semboola.Application ();
     return g_app.run (args);

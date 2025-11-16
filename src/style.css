@@ -1,0 +1,11 @@
+.circle-badge {
+  background-color: #666666;
+  /* 文字色:WHITE */
+  color: #ffffff;
+
+  /* 角を丸める */
+  border-radius: 40px;
+
+  min-width: 16px;
+  min-height: 16px;
+}

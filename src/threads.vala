@@ -20,9 +20,11 @@
 
 using Gtk;
 using GLib;
+using Gee;
 using Gdk;
 using Adw;
 using FiveCh;
+using Sqlite;
 
 [GtkTemplate (ui = "/jp/lv34/Semboola/threads.ui")]
 public class ThreadsView : Adw.NavigationPage {
@@ -78,6 +80,27 @@ public class ThreadsView : Adw.NavigationPage {
             var fmt = _("%Y-%m-%d %H:%M:%S");
             row.dtime.set_text (t.dtime.format (fmt));
             row.ress.set_text ("%d".printf (t.ress));
+            if (t.unread != -1)
+                row.unread.set_text (t.unread.to_string ());
+
+            t.bind_property (
+                "unread",
+                row.unread,
+                "label",
+                BindingFlags.SYNC_CREATE
+            );
+            t.bind_property (
+                "read",
+                row.unread,
+                "visible",
+                BindingFlags.SYNC_CREATE
+            );
+            // t.bind_property (
+            //     "favorite",
+            //     row.favorite,
+            //     "label",
+            //     BindingFlags.SYNC_CREATE
+            // );
         });
 
         listview.model = model;
@@ -87,6 +110,7 @@ public class ThreadsView : Adw.NavigationPage {
         this.shown.connect (() => {
             win = this.get_root() as Semboola.Window;
             init_load.begin ();
+            load_threadlist.begin (); // 未読更新
         });
     }
 
@@ -104,8 +128,13 @@ public class ThreadsView : Adw.NavigationPage {
         }
 
         yield reload();
-
         initialized = true;
+        yield load_threadlist (); // 未読更新
+    }
+
+    private async void all_reload () {
+        yield reload();
+        yield load_threadlist (); // 未読更新
     }
 
     // スレ一覧更新(非同期で呼ぶこと)
@@ -116,6 +145,7 @@ public class ThreadsView : Adw.NavigationPage {
             var client = new FiveCh.Client(FiveCh.cookie);
 
             var list = yield client.fetch_subject_async(board);  // 非同期
+
             if (list.length() > 0) {
                 store.remove_all ();
                 foreach (var r in list) {
@@ -138,9 +168,58 @@ public class ThreadsView : Adw.NavigationPage {
         }
     }
 
+    // 未読チェック
+    private async void load_threadlist () {
+        try {
+            Db.DB db = new Db.DB();
+
+            string sql = """
+                SELECT *
+                  FROM threadlist
+                 WHERE board_url = ?1
+                 AND bbs_id =?2
+                 ORDER BY thread_id asc
+            """;
+
+            var rows = db.query (sql, {FiveCh.Board.guess_site_base_from_url (url), FiveCh.Board.guess_board_key_from_url (url)});
+
+            // storeとrowsのマージ
+            var index = new HashMap<string, HashMap<string, string>> ();
+            foreach (var map in rows) {
+                string? id = map.get ("thread_id");
+                if (id == null)
+                    continue;
+                index[id] = map;
+            }
+
+            for (uint i = 0; i < store.get_n_items (); ++i) {
+                var obj  = store.get_item (i);
+                var item = obj as ThreadRow.ThreadsItem;
+                HashMap<string, string>? extra = index.get (item.thread_id);
+
+                if (extra == null)
+                    continue; // ArrayList 側に情報なし
+
+                // 必要なカラムを引いて反映
+                string? v;
+
+                v = extra.get ("current_res_count");
+                item.unread = item.ress - v.to_int ();
+                if (item.unread < 0) item.unread = 0;
+                item.read = true;
+
+                v = extra.get ("favorite");
+                item.favorite = v.to_int ();
+            }
+
+        } catch (Error e) {
+            win.show_error_toast (_("Invalid error."));
+        }
+    }
+
     [GtkCallback]
     private void on_reload_click () {
-        reload.begin ();
+        all_reload.begin ();
     }
 
     // 行クリック
@@ -153,5 +232,16 @@ public class ThreadsView : Adw.NavigationPage {
             return;
         }
         nav.push(new RessView (item.url, item.title));
+    }
+
+    [GtkCallback]
+    private void on_add_click () {
+        var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
+        var popup = new new_thread (window, g_app, new FiveCh.Board(Board.guess_site_base_from_url (url), Board.guess_board_key_from_url (url)));
+        popup.submitted.connect (() => {
+            // ここで好きなメソッドを呼ぶ
+            this.all_reload.begin ();
+        });
+        popup.present ();
     }
 }

@@ -30,11 +30,24 @@
           </object>
         </child>
         <child>
+          <object class="GtkBox">
+            <property name="halign">end</property>
+            <property name="hexpand">True</property>
+            <child>
+              <object class="GtkLabel" id="unread">
+                <property name="css-classes">circle-badge</property>
+                <property name="halign">end</property>
+                <property name="justify">center</property>
+                <property name="valign">center</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
           <object class="GtkLabel" id="spd">
             <property name="css-classes">dim-label</property>
             <property name="css-name">dim-label</property>
             <property name="halign">end</property>
-            <property name="hexpand">True</property>
             <property name="justify">center</property>
             <property name="margin-end">12</property>
             <property name="width-request">80</property>

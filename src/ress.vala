@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- *w
+ *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -150,8 +150,8 @@ public class RessView : Adw.NavigationPage {
 
         int i = res_count;
         Idle.add (() => {
-        // Timeout.add (100, () => { // 1000ms = 1sec
-            // 1回のIdleで何行作るか。環境次第で 10〜50 くらいに調整。
+        // Timeout.add (100, () => { // テスト用
+            // 1回のIdleで20行
             int chunk = 20;
             for (int n = 0; n < chunk && i < posts.size; n++, i++) {
                 var post = posts[i];
@@ -212,8 +212,49 @@ public class RessView : Adw.NavigationPage {
             posts = yield loader.load_from_url_async (url, cancellable);
 
             rebuild_listbox_incremental ();
-        } catch (Error e) {
 
+            // DB更新 何件読んだかで未読がわかる
+            try {
+                string? board_key = FiveCh.Board.guess_board_key_from_url (url);
+                string? site_base = FiveCh.Board.guess_site_base_from_url (url);
+                string? threadkey = FiveCh.DatLoader.guess_threadkey_from_url (url);
+
+
+                Db.DB db = new Db.DB();
+                Sqlite.Statement st;
+                string sql = """
+                    INSERT INTO threadlist (board_url, bbs_id, thread_id, current_res_count, favorite, last_touch_date)
+                    VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                    ON CONFLICT(board_url, bbs_id, thread_id) DO UPDATE SET
+                    current_res_count = excluded.current_res_count,
+                    last_touch_date = excluded.last_touch_date;
+                """;
+                int rc = db.db.prepare_v2 (sql, -1, out st, null);
+
+                if (rc != Sqlite.OK) {
+	                stderr.printf ("Error: %d: %s\n", db.db.errcode (), db.db.errmsg ());
+	                return;
+                }
+
+                st.bind_text (1, site_base);
+                st.bind_text (2, board_key);
+                st.bind_text (3, threadkey);
+                st.bind_int  (4, posts.size);
+                st.bind_int  (5, 0);
+                st.bind_int64 (6, new DateTime.now_utc ().to_unix ());
+
+                rc = st.step ();
+                st.reset ();
+                if (rc != Sqlite.DONE) {
+                    stderr.printf ("Error: %d: %s\n", db.db.errcode (), db.db.errmsg ());
+                    win.show_error_toast (_("Database error"));
+                }
+
+            } catch {
+                win.show_error_toast (_("Database error"));
+            }
+        } catch (Error e) {
+            win.show_error_toast (_("Invalid error"));
         } finally {
              this.title=name;
         }

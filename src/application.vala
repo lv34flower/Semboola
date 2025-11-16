@@ -18,6 +18,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+using Gtk;
+using GLib;
+
 public class Semboola.Application : Adw.Application {
     public Application () {
         Object (
@@ -38,6 +41,21 @@ public class Semboola.Application : Adw.Application {
     }
 
     public override void activate () {
+
+        // CSS適用
+        var css = new CssProvider ();
+        css.load_from_resource ("/jp/lv34/semboola/style.css");
+
+        // GTK4では Screen ではなく Display
+        var display = Gdk.Display.get_default ();
+
+        StyleContext.add_provider_for_display (
+            display,
+            css,
+            STYLE_PROVIDER_PRIORITY_APPLICATION
+        );
+        //-------------------
+
         base.activate ();
         var win = this.active_window ?? new Semboola.Window (this);
         win.present ();

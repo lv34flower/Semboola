@@ -1,0 +1,87 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.96.1 -->
+<interface>
+  <!-- interface-name new_thread.ui -->
+  <requires lib="gtk" version="4.18"/>
+  <requires lib="libadwaita" version="1.2"/>
+  <template class="new_thread" parent="AdwApplicationWindow">
+    <property name="default-height">480</property>
+    <property name="default-width">320</property>
+    <property name="modal">True</property>
+    <child>
+      <object class="GtkBox">
+        <property name="margin-bottom">16</property>
+        <property name="margin-end">16</property>
+        <property name="margin-start">16</property>
+        <property name="margin-top">16</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Create a new thread</property>
+            <property name="margin-bottom">10</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkListBox">
+            <child>
+              <object class="AdwEntryRow" id="name">
+                <property name="margin-bottom">8</property>
+                <property name="title" translatable="yes">From</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwEntryRow" id="mail">
+                <property name="margin-bottom">8</property>
+                <property name="title" translatable="yes">E-mail</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwEntryRow" id="title">
+                <property name="margin-bottom">8</property>
+                <property name="title" translatable="yes">Subject</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="height-request">200</property>
+            <property name="vexpand">True</property>
+            <child>
+              <object class="GtkTextView" id="text">
+                <property name="buffer">
+                  <object class="GtkTextBuffer" id="textbuffer"/>
+                </property>
+                <property name="height-request">120</property>
+                <property name="left-margin">8</property>
+                <property name="top-margin">8</property>
+                <property name="vexpand">True</property>
+                <property name="wrap-mode">word</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="margin-top">16</property>
+            <child>
+              <object class="GtkButton">
+                <property name="halign">end</property>
+                <property name="hexpand">True</property>
+                <property name="label" translatable="yes">Cancel</property>
+                <signal name="clicked" handler="on_cancel_click"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton">
+                <property name="label" translatable="yes">Post</property>
+                <property name="margin-start">8</property>
+                <signal name="clicked" handler="on_post_click"/>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

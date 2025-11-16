@@ -21,6 +21,17 @@
                 <property name="tooltip-text" translatable="yes">Main Menu</property>
               </object>
             </child>
+            <child>
+              <object class="GtkButton">
+                <property name="has-frame">False</property>
+                <signal name="clicked" handler="on_add_click"/>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">list-add-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
           </object>
         </child>
         <child>

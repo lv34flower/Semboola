@@ -72,6 +72,26 @@ namespace Db {
         }
     }
 
+    public class ThreadList : Object {
+        public string board_url;
+        public string bbs_id;
+        public string thread_id;
+        public int current_res_count;
+        public int favorite;
+        public uint64 last_touch_date;
+
+        public static ThreadList from_row (HashMap<string,string> r) {
+            var n = new ThreadList ();
+            n.board_url  = r["board_url"];
+            n.bbs_id = r["bbs_id"];
+            n.thread_id = r["thread_id"];
+            n.current_res_count = r["current_res_count"].to_int ();
+            n.favorite = r["favorite"].to_int ();
+            n.last_touch_date = r["last_touch_date"].to_uint64 ();
+            return n;
+        }
+    }
+
     public class BbsList : Object {
         public string url;
         public string name;
@@ -83,7 +103,6 @@ namespace Db {
             return n;
         }
     }
-
 
     /* SQLiteのインスタンスを返します。
      * ディレクトリがなければ作成します。ファイルが存在しない場合は空のDBを作成します。

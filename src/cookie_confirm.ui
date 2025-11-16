@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.96.1 -->
+<interface>
+  <!-- interface-name cookie_confirm.ui -->
+  <requires lib="gtk" version="4.18"/>
+  <requires lib="libadwaita" version="1.0"/>
+  <template class="cookie_confirm" parent="AdwApplicationWindow">
+    <property name="default-height">480</property>
+    <property name="default-width">360</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="hexpand">True</property>
+            <property name="vexpand">True</property>
+            <child>
+              <object class="GtkTextView">
+                <property name="cursor-visible">False</property>
+                <property name="editable">False</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="margin-bottom">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-top">8</property>
+            <child>
+              <object class="GtkButton">
+                <property name="halign">end</property>
+                <property name="hexpand">True</property>
+                <property name="label" translatable="yes">Cancel</property>
+                <property name="valign">end</property>
+                <signal name="clicked" handler="on_cancel_click"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton">
+                <property name="halign">end</property>
+                <property name="label" translatable="yes">Post</property>
+                <property name="margin-start">16</property>
+                <property name="valign">end</property>
+                <signal name="clicked" handler="on_submit_click"/>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

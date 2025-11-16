@@ -25,9 +25,11 @@ public class AddBoardWindow : Adw.ApplicationWindow {
     public signal void submitted (string text);
 
     [GtkChild]
-    private unowned Gtk.Entry bdadd_entry;
+    private unowned Gtk.Entry entry;
     [GtkChild]
-    private unowned Gtk.Button bdadd_button_submit;
+    private unowned Gtk.Button button_submit;
+    [GtkChild]
+    private unowned Gtk.Button button_cancel;
 
     public AddBoardWindow (Gtk.Window parent, Adw.Application app) {
         Object (application: app, transient_for: parent);
@@ -35,8 +37,12 @@ public class AddBoardWindow : Adw.ApplicationWindow {
     }
 
     construct {
-        bdadd_button_submit.clicked.connect (() => {
-            submitted (bdadd_entry.text);
+        button_submit.clicked.connect (() => {
+            submitted (entry.text);
+            this.close ();
+        });
+
+        button_cancel.clicked.connect (() => {
             this.close ();
         });
     }
