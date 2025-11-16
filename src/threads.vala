@@ -239,7 +239,7 @@ public class ThreadsView : Adw.NavigationPage {
         var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
         var popup = new new_thread (window, g_app, new FiveCh.Board(Board.guess_site_base_from_url (url), Board.guess_board_key_from_url (url)));
         popup.submitted.connect (() => {
-            // ここで好きなメソッドを呼ぶ
+            // 終わったら再読み込み
             this.all_reload.begin ();
         });
         popup.present ();

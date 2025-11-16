@@ -8,7 +8,7 @@
   <ui template-class="ThreadRow" filename="thread_row.ui" sha256="d7c6ec87f3915b1e86be97cc825f116398a9caba923c6a25ecb992f55987043f"/>
   <ui template-class="RessView" filename="ress.ui" sha256="270f4f9f73910863e9cfb697d4de4583a63c780751e23bb759e3e13af8d4cff3"/>
   <ui template-class="new_thread" filename="new_thread.ui" sha256="aeb0c128c8647e36782f44c21bb5a5ac751c957e93ca84048f3a001b1285c126"/>
-  <ui template-class="cookie_confirm" filename="cookie_confirm.ui" sha256="d06d57733f79717b011bf2457597607ac85649c4e4b2e0c7d2eea68b2f801f6c"/>
+  <ui template-class="cookie_confirm" filename="cookie_confirm.ui" sha256="9e4fa0165941f9438fc11f8aedb99621fae27647bfb06f35240df4039c553fa4"/>
   <ui template-class="SemboolaWindow" filename="window.ui" sha256="40cccb50e3b6a26c4329d6c9735f5e9415e9afef4a4c723e9bc32b8fdc8f03bf">
     <requires>BoardsView</requires>
   </ui>

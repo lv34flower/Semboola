@@ -31,6 +31,8 @@ public class Semboola.Application : Adw.Application {
     }
 
     construct {
+        typeof (WebKit.WebView).ensure (); //cookie_confirmで使用
+
         ActionEntry[] action_entries = {
             { "about", this.on_about_action },
             { "preferences", this.on_preferences_action },

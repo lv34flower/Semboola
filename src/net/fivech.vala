@@ -369,7 +369,6 @@ namespace FiveCh {
                 throw new IOError.FAILED ("POST failed: %u — %s\n%s"
                     .printf ((uint) status, msg.get_reason_phrase (), text));
             }
-            print(text);
             return text;
         }
 

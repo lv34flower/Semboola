@@ -73,14 +73,14 @@ public class new_thread : Adw.ApplicationWindow {
             var opt = new FiveCh.PostOptions ();
             opt.submit_label = "新規スレッド作成";
             res = yield client.post_with_analysis_async (board,
-                                                                    board.board_key,   // bbs
-                                                                    null, // key
-                                                                    textbuffer.text, //text
-                                                                    name.text,   //name
-                                                                    mail.text,  //mail
-                                                                    title.text,  //subject
-                                                                    opt
-                                                                    );
+                                                        board.board_key,   // bbs
+                                                        null, // key
+                                                        textbuffer.text, //text
+                                                        name.text,   //name
+                                                        mail.text,  //mail
+                                                        title.text,  //subject
+                                                        opt
+                                                        );
         } catch (Error e) {
             win.show_error_toast (_("Invalid error."));
             return;
@@ -94,32 +94,22 @@ public class new_thread : Adw.ApplicationWindow {
         switch (res.kind) {
         case FiveCh.Client.PostPageKind.OK:
             // 普通に成功
-            stdout.printf ("posted ok\n");
+            submitted ();
             this.close ();
             break;
 
         case FiveCh.Client.PostPageKind.ERROR:
-            // エラー表示
-            stderr.printf ("post error: %s\n", res.error_message ?? "(unknown)");
-            break;
-
         case FiveCh.Client.PostPageKind.CONFIRM:
-            // 初回・クッキー・書き込み確認
-            // res.confirm_message や res.message をダイアログに表示して、
-            // ユーザーに本当に書き込むか聞く
-            //bool user_ok = show_confirm_dialog (res);  // ←ここは自分で実装
-            //if (!user_ok) break;
-
-            if (res.confirm_form == null) {
-                // フォームが取れなかったので諦める（あるいは HTML をそのまま見せる）
-                break;
-            }
-
-            // ユーザーがOKを押したら、確認フォームを使って2回目POST
+            // エラーまたは確認
+            var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
+            var popup = new cookie_confirm (window, g_app, res.html, board.bbs_cgi_url ());
+            popup.repost.connect (() => {
+                post.begin ();
+            });
+            popup.present ();
 
             break;
         }
-        submitted ();
 
     }
 }

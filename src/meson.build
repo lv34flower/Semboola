@@ -10,6 +10,7 @@ Semboola_sources = [
   'ress.vala',
   'res_row.vala',
   'clickable_label.vala',
+  'cookie_confirm.vala',
   'net/fivech.vala',
   'net/db.vala',
 ]
@@ -24,6 +25,7 @@ Semboola_deps = [
   dependency('json-glib-1.0'),
   dependency('gee-0.8'),
   dependency('sqlite3'),
+  dependency('webkitgtk-6.0'),
   meson.get_compiler('vala').find_library('posix'),
 ]
 
