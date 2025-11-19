@@ -1006,7 +1006,36 @@ namespace FiveCh {
                 var parts = line.split ("<>");
                 if (parts.length < 4) continue;
 
-                string name = Client.decode_html_entities (parts[0]);
+                string trip = "";
+                string name = parts[0];
+                // ワッチョイなど分離
+                try {
+                    MatchInfo mi;
+                    var rx = new GLib.Regex (
+                        "^(.*?)</b>\\s*([^<]*)<b[^>]*>\\s*$",
+                        GLib.RegexCompileFlags.DOTALL
+                    );
+
+
+                    if (rx.match (parts[0], 0, out mi)) {
+                        // グループ1: 名前
+                        name = mi.fetch (1).strip ();
+                        // グループ2: "(xxxx-xxxx)" など
+                        trip = mi.fetch (2).strip ();
+                    } else {
+                        // マッチしない場合はそのまま全部名前扱い
+                        name = parts[0];
+                        trip = "";
+                    }
+                } catch (Error e) {
+                    name = parts[0];
+                    trip = "";
+                }
+
+
+
+                name = Client.decode_html_entities (name);
+                trip = Client.decode_html_entities (trip);
                 string mail = Client.decode_html_entities (parts[1]);
                 string date_id = Client.decode_html_entities (parts[2]);
                 string body = Client.decode_html_entities (parts[3]);
@@ -1019,7 +1048,7 @@ namespace FiveCh {
                     date_id = date_id.substring (0, pos);
                 }
 
-                var post = new ResRow.ResItem (idx++, name, mail, date_id, id, body);
+                var post = new ResRow.ResItem (idx++, name, trip, mail, date_id, id, body);
                 list.add (post);
             }
             return list;

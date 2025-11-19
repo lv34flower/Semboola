@@ -123,12 +123,13 @@ public class RessView : Adw.NavigationPage {
 
     private void set_post_widgets (ResRow.ResItem post, Gtk.Label header, ClickableLabel body) {
         string safe_name = Markup.escape_text (post.name);
+        string safe_trip = Markup.escape_text (post.trip);
         string safe_date = Markup.escape_text (post.date);
         string id_part = (post.id != "")
             ? @" <span foreground='#c03030'>ID:$(Markup.escape_text (post.id))</span>"
             : "";
-
-        header.set_markup (@"<b>$(post.index)</b> $safe_name  $safe_date$id_part");
+        print (safe_trip);
+        header.set_markup (@"<b>$(post.index)</b> <b>$safe_name</b>$safe_trip $safe_date$id_part");
 
         var spans = post.get_spans ();
         body.set_spans (spans);
