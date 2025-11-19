@@ -223,11 +223,12 @@ public class RessView : Adw.NavigationPage {
                 Db.DB db = new Db.DB();
                 Sqlite.Statement st;
                 string sql = """
-                    INSERT INTO threadlist (board_url, bbs_id, thread_id, current_res_count, favorite, last_touch_date)
-                    VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                    INSERT INTO threadlist (board_url, bbs_id, thread_id, current_res_count, favorite, last_touch_date, title)
+                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                     ON CONFLICT(board_url, bbs_id, thread_id) DO UPDATE SET
+                    title = excluded.title,
                     current_res_count = excluded.current_res_count,
-                    last_touch_date = excluded.last_touch_date;
+                    last_touch_date = excluded.last_touch_date
                 """;
                 int rc = db.db.prepare_v2 (sql, -1, out st, null);
 
@@ -242,6 +243,7 @@ public class RessView : Adw.NavigationPage {
                 st.bind_int  (4, posts.size);
                 st.bind_int  (5, 0);
                 st.bind_int64 (6, new DateTime.now_utc ().to_unix ());
+                st.bind_text (7, name);
 
                 rc = st.step ();
                 st.reset ();

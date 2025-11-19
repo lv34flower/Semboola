@@ -4,6 +4,7 @@
     <file preprocess="xml-stripblanks">window.ui</file>
     <file preprocess="xml-stripblanks">add_board.ui</file>
     <file preprocess="xml-stripblanks">boards.ui</file>
+    <file preprocess="xml-stripblanks">thread_hist.ui</file>
     <file preprocess="xml-stripblanks">new_thread.ui</file>
     <file preprocess="xml-stripblanks">threads.ui</file>
     <file preprocess="xml-stripblanks">thread_row.ui</file>

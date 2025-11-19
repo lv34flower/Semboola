@@ -43,7 +43,16 @@ int main (string[] args) {
         dir.make_directory_with_parents ();
     }
 
-    FiveCh.cookie = Path.build_filename (data_dir, "cookie.txt");
+    // Fivech static変数の初期化
+    FiveCh.cookie = Path.build_filename (data_dir, "cookies.txt");
+    FiveCh.ua = Path.build_filename (data_dir, "User-Agent.txt");
+    FiveCh.set_default_ua ();
+    FiveCh.g_session = new Soup.Session ();
+    //FiveCh.g_session.user_agent = FiveCh.default_browser_ua ();
+
+    FiveCh.g_cookiejar = new Soup.CookieJarText (FiveCh.cookie, false);
+
+    FiveCh.g_session.add_feature (FiveCh.g_cookiejar);
 
     g_app = new Semboola.Application ();
     return g_app.run (args);

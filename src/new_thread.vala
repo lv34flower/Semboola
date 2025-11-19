@@ -67,7 +67,7 @@ public class new_thread : Adw.ApplicationWindow {
     }
 
     public async void post () {
-        var client = new FiveCh.Client (FiveCh.cookie);
+        var client = new FiveCh.Client ();
         FiveCh.Client.PostResult? res;
         try {
             var opt = new FiveCh.PostOptions ();
@@ -82,7 +82,8 @@ public class new_thread : Adw.ApplicationWindow {
                                                         opt
                                                         );
         } catch (Error e) {
-            win.show_error_toast (_("Invalid error."));
+            print (e.message);
+            win.show_error_toast (e.message);
             return;
         }
 

@@ -142,7 +142,7 @@ public class ThreadsView : Adw.NavigationPage {
         this.title=_("Loading...");
         try {
             var board  = new FiveCh.Board(Board.guess_site_base_from_url (url), Board.guess_board_key_from_url (url));
-            var client = new FiveCh.Client(FiveCh.cookie);
+            var client = new FiveCh.Client();
 
             var list = yield client.fetch_subject_async(board);  // 非同期
 

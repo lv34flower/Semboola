@@ -65,11 +65,11 @@ public class new_res : Adw.ApplicationWindow {
     }
 
     public async void post () {
-        var client = new FiveCh.Client (FiveCh.cookie);
+        var client = new FiveCh.Client ();
         FiveCh.Client.PostResult? res;
         try {
             var opt = new FiveCh.PostOptions ();
-            opt.submit_label = "新規スレッド作成";
+            opt.submit_label = "書き込む";
             res = yield client.post_with_analysis_async (board,
                                                         board.board_key,   // bbs
                                                         FiveCh.DatLoader.guess_threadkey_from_url (url), // key
@@ -80,7 +80,9 @@ public class new_res : Adw.ApplicationWindow {
                                                         opt
                                                         );
         } catch (Error e) {
-            win.show_error_toast (_("Invalid error."));
+            //win.show_error_toast (_("Invalid error."));
+            win.show_error_toast (e.message);
+            print(e.message);
             return;
         }
 

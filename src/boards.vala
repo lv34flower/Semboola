@@ -45,6 +45,8 @@ public class BoardsView : Adw.NavigationPage {
     [GtkChild]
     unowned Gtk.Button bd_button_add;
     [GtkChild]
+    unowned Gtk.Button bd_button_hist;
+    [GtkChild]
     unowned Gtk.ListView bd_list_boards;
     [GtkChild]
     unowned Gtk.ToggleButton bd_toggle_edit;
@@ -64,6 +66,7 @@ public class BoardsView : Adw.NavigationPage {
 
         // ボタン押したとき
         bd_button_add.clicked.connect (on_button_add);
+        bd_button_hist.clicked.connect (on_button_hist);
 
         bbslist();
 
@@ -208,10 +211,19 @@ public class BoardsView : Adw.NavigationPage {
         popup.present ();
     }
 
+    private void on_button_hist() {
+        // 次の画面へ遷移
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
+            return;
+        }
+        nav.push(new thread_hist ());
+    }
+
     // リストに追加
     private async void add_bbs_list (string url) {
         // URLからタイトルを取得
-        var client = new FiveCh.Client ("cookies.txt");
+        var client = new FiveCh.Client ();
         string name;
         try {
             name = yield client.fetch_board_title_from_url_async (url);

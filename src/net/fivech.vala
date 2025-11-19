@@ -4,7 +4,13 @@ using Posix;
 
 namespace FiveCh {
 
-    string cookie;
+    // アプリケーション内共通の変数
+    public string cookie;  // cookie.txtのパス
+    string ua;  // UAのパス
+    string ua_text = null; // uaの内容
+    Session g_session;
+    CookieJar g_cookiejar;
+    // ----------------------------
 
     /** Represents one line in subject.txt */
     public class SubjectEntry : Object {
@@ -105,12 +111,6 @@ namespace FiveCh {
             return board_base;
         }
 
-        public static string default_browser_ua () {
-            // Safe default: browser-like UA recommended for posting on 5ch.
-            // You may replace with a runtime-detected UA string if desired.
-            return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
-        }
-
         // Extract board key from typical 5ch-like URLs
         // Supported forms:
         //  - https://host/test/read.cgi/<board>/<key>/...
@@ -195,15 +195,10 @@ namespace FiveCh {
         public Session session { get; private set; }
         public CookieJar cookiejar { get; private set; }
 
-        public Client (string? cookie_path = null, string? user_agent = null) {
-            session = new Session ();
-            session.user_agent = user_agent ?? Board.default_browser_ua ();
-
-            if (cookie_path != null && cookie_path != "") {
-                cookiejar = new CookieJarText (cookie_path, false);
-            } else {
-                cookiejar = new CookieJar ();
-            }
+        public Client () {
+            session = g_session;
+            session.user_agent = default_browser_ua ();
+            cookiejar = g_cookiejar;
             session.add_feature (cookiejar);
 
             // Follow redirects automatically (default true). Compression is automatic.
@@ -297,46 +292,24 @@ namespace FiveCh {
             PostOptions opts = options ?? new PostOptions ();
 
             var form = new HashTable<string,string> (str_hash, str_equal);
-            if (subject != null) form["subject"] = subject;
-            form["FROM"]    = from;
-            form["mail"]    = mail;
-            form["MESSAGE"] = message;
+            if (subject != null) form["subject"] = encode_html_entities(subject);
+            form["FROM"]    = encode_html_entities(from);
+            form["mail"]    = encode_html_entities(mail);
+            form["MESSAGE"] = encode_html_entities(message);
             if (key != null) form["key"] = key;
             form["bbs"]     = bbs;
             form["time"]    = ((int64) (get_real_time ()/1000000)).to_string ();
             form["submit"]  = opts.submit_label;
+
+            opts.extra_headers = opts.extra_headers ?? new HashTable<string,string> (str_hash, str_equal);
+            opts.extra_headers["Referer"] = board.dat_url (key);
+            opts.extra_headers["Origin"] = board.site_base_url;
 
             string html = yield post_once_async (board, form, opts, cancel);
 
             // HTML→PostResult
             return analyze_post_html (html);
         }
-
-
-        public async string post_async (Board board,
-                                       string bbs,
-                                       string? key,
-                                       string message,
-                                       string from = "",
-                                       string mail = "",
-                                       string? subject = null,
-                                       PostOptions? options = null,
-                                       Cancellable? cancel = null) throws Error {
-            PostOptions opts = options ?? new PostOptions ();
-
-            var form = new HashTable<string,string> (str_hash, str_equal);
-            if (subject != null) form["subject"] = subject;
-            form["FROM"]    = from;
-            form["mail"]    = mail;
-            form["MESSAGE"] = message;
-            if (key != null) form["key"] = key;
-            form["bbs"]     = bbs;
-            form["time"]    = ((int64) (get_real_time ()/1000000)).to_string ();
-            form["submit"]  = opts.submit_label;
-
-            return yield post_once_async (board, form, opts, cancel);
-        }
-
 
         private async string post_once_async (Board board,
                                               HashTable<string,string> form,
@@ -366,6 +339,7 @@ namespace FiveCh {
 
             var status = msg.get_status ();
             if (!(status == 200 || status == 301 || status == 302)) {
+                print(text);
                 throw new IOError.FAILED ("POST failed: %u — %s\n%s"
                     .printf ((uint) status, msg.get_reason_phrase (), text));
             }
@@ -724,16 +698,22 @@ namespace FiveCh {
             size_t sz = bytes.get_size ();
             unowned uint8[] data = (uint8[]) bytes.get_data ();
             // Try UTF-8 first
-            try {
-                string s = (string) data; // treat as UTF-8 — may throw if invalid
-                if (s.validate ()) { used_encoding = "UTF-8"; return s; }
-            } catch (Error e) { /* fallthrough */ }
+            string raw = (string) data;
+            if (raw.validate ((ssize_t) sz)) {
+                used_encoding = "UTF-8";
+                print("utf8");
+                // len バイトだけをコピーして NUL 終端された string を作る
+                // ※ GLib.strndup ではなく、string.ndup を使う
+                string s = raw.ndup (sz);
+                return s;
+            }
 
             string[] encs = { "CP932", "Shift_JIS", "EUC-JP", "ISO-2022-JP" };
             foreach (var enc in encs) {
                 try {
-                    string converted = convert_bytes (data, sz, "UTF-8", enc);
+                    string converted = convert_bytes (data, sz, "UTF-8//IGNORE", enc);
                     used_encoding = enc;
+                    print(enc);
                     return converted;
                 } catch (Error e) { }
             }
@@ -939,6 +919,29 @@ namespace FiveCh {
             return sb.str;
         }
 
+        public static string encode_html_entities (string src) {
+            var sb = new StringBuilder ();
+
+            for (int i = 0; i < src.length; ++i) {
+                unichar ch = src.get_char (i);
+
+                if ( (int)ch == -1) {
+                    continue;
+                }
+                // 絵文字など、たいてい U+10000 以上の領域にいる文字だけ数値参照にする
+                if (ch > 0xFFFF) {
+                    sb.append_printf ("&#%d;", (int) ch);
+                } else {
+                    // それ以外（日本語や通常の記号など）はそのまま
+                    sb.append_unichar (ch);
+                }
+
+
+            }
+
+            return sb.str;
+        }
+
     }
 
     public class DatLoader : Object {
@@ -1004,8 +1007,8 @@ namespace FiveCh {
                 if (parts.length < 4) continue;
 
                 string name = Client.decode_html_entities (parts[0]);
-                string mail = parts[1];
-                string date_id = parts[2];
+                string mail = Client.decode_html_entities (parts[1]);
+                string date_id = Client.decode_html_entities (parts[2]);
                 string body = Client.decode_html_entities (parts[3]);
 
                 string id = "";
@@ -1123,4 +1126,27 @@ namespace FiveCh {
         }
     }
 
+    // 1回だけ読み込みます。UAをファイルから取得
+    void set_default_ua () {
+        if (ua_text == null) {
+            try {
+                FileUtils.get_contents (ua, out ua_text);
+            } catch (FileError e) {
+                ua_text = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
+                // FileError.NOENT
+                if (e.code == FileError.NOENT) {
+                    try {
+                        FileUtils.set_contents (ua, ua_text);
+                    } catch (FileError e2) {
+                    }
+                } else {
+                }
+            }
+        }
+        ua_text = ua_text.chomp ();
+    }
+
+    string default_browser_ua () {
+        return ua_text;
+    }
 }

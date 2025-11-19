@@ -33,7 +33,19 @@
               </object>
             </child>
             <child>
+              <object class="GtkButton" id="bd_button_hist">
+                <property name="has-frame">False</property>
+                <property name="label" translatable="yes">Add</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">accept_time_event-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
               <object class="GtkToggleButton" id="bd_toggle_edit">
+                <property name="margin-start">6</property>
                 <child>
                   <object class="GtkImage">
                     <property name="icon-name">user-trash-symbolic</property>
