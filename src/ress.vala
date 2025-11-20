@@ -49,6 +49,9 @@ public class RessView : Adw.NavigationPage {
     // ここまでロード
     private int res_count = 0;
 
+    // スクロールいち
+    private double saved_vadjustment = 0.0;
+
     [GtkChild]
     unowned Gtk.ListBox listview;
 
@@ -61,6 +64,46 @@ public class RessView : Adw.NavigationPage {
         this.name = name;
 
         loader = new DatLoader ();
+
+        var click = new Gtk.GestureClick ();
+        click.set_button (0);
+
+        click.released.connect ((n_press, x, y) => {
+
+            // spanと競合しないよう
+            if (suppress_row_click_once)
+                return;
+
+            // どのボタンか
+            uint button = click.get_current_button ();
+
+            // y は listview のローカル座標
+            var row = listview.get_row_at_y ((int) y);
+            if (row == null)
+                return;
+
+            int idx = row.get_index ();  // 0-based
+            if (idx < 0 || idx >= posts.size)
+                return;
+
+            var post = posts[idx];
+
+            switch (button) {
+            case Gdk.BUTTON_PRIMARY:
+                // 左クリック（n_press でシングル / ダブルも判定可能）
+                on_row_left_clicked (post, idx, n_press);
+                break;
+            case Gdk.BUTTON_SECONDARY:
+                // 右クリック
+                on_row_right_clicked (post, idx, x, y);
+                break;
+            default:
+                // 中ボタンなど必要ならここに
+                break;
+            }
+        });
+
+        listview.add_controller (click);
 
         // var selection = new Gtk.SingleSelection (store);
         // selection.autoselect = false;
@@ -76,41 +119,41 @@ public class RessView : Adw.NavigationPage {
 
         // bind_model 使用
         // listview.bind_model (store, (obj) => {
-            // var post = (ResRow.ResItem) obj;
+        //     var post = (ResRow.ResItem) obj;
 
-            // var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
-            // row_box.margin_top = 6;
-            // row_box.margin_bottom = 6;
-            // row_box.margin_start = 8;
-            // row_box.margin_end = 16;
+        //     var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
+        //     row_box.margin_top = 6;
+        //     row_box.margin_bottom = 6;
+        //     row_box.margin_start = 8;
+        //     row_box.margin_end = 16;
 
-            // var header = new Gtk.Label (null);
-            // header.use_markup = true;
-            // header.xalign = 0.0f;
-            // header.wrap = true;
-            // header.wrap_mode = Pango.WrapMode.WORD_CHAR;
+        //     var header = new Gtk.Label (null);
+        //     header.use_markup = true;
+        //     header.xalign = 0.0f;
+        //     header.wrap = true;
+        //     header.wrap_mode = Pango.WrapMode.WORD_CHAR;
             //header.ellipsize = Pango.EllipsizeMode.END;
 
-            // var body = new ClickableLabel ();
+        //     var body = new ClickableLabel ();
 
             // ここで span イベント接続（ListView版と同じノリ）
-            // body.span_left_clicked.connect ((span) => {
-            //     on_span_left_clicked (post, span);
-            // });
-            // body.span_right_clicked.connect ((span, x, y) => {
-            //     on_span_right_clicked (post, span, x, y, body);
-            // });
+        //     body.span_left_clicked.connect ((span) => {
+        //         on_span_left_clicked (post, span);
+        //     });
+        //     body.span_right_clicked.connect ((span, x, y) => {
+        //         on_span_right_clicked (post, span, x, y, body);
+        //     });
 
             // ★ここが抜けてた：中身を row_box に入れる
-            // row_box.append (header);
-            // row_box.append (body);
+        //     row_box.append (header);
+        //     row_box.append (body);
 
             // 中身セット
-            // set_post_widgets (post, header, body);
+        //     set_post_widgets (post, header, body);
 
-            // var row = new Gtk.ListBoxRow ();
-            // row.set_child (row_box);
-            // return row;
+        //     var row = new Gtk.ListBoxRow ();
+        //     row.set_child (row_box);
+        //     return row;
         // });
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
         this.shown.connect (() => {
@@ -125,6 +168,36 @@ public class RessView : Adw.NavigationPage {
 
         // 行がアクティブ化されたとき（pos は行番号）
         // listview.activate.connect (on_row_activated);
+    }
+
+    // 左クリック
+    private void on_row_left_clicked (ResRow.ResItem post, int row_index, int n_press) {
+        // 例: ダブルクリックでツリー画面を開く
+        if (n_press >= 2) {
+            // ここでツリー用 index 配列を作るメソッド呼ぶ
+            Gee.ArrayList<uint> order;
+            Gee.ArrayList<int> depths;
+            Gee.HashMap<uint,uint> parent;
+
+            build_reply_tree_indices (post.index, out order, out depths, out parent);
+
+            // 別画面に渡す
+            // var tree_view = new ReplyTreeView (posts, order, depths, parent);
+            // win.push_page (tree_view);
+            win.show_error_toast ("test- 2c");
+        } else {
+            // シングルクリックでスクロールだけとか
+            win.show_error_toast ("test- 1c");
+        }
+    }
+
+    // 右クリック
+    private void on_row_right_clicked (ResRow.ResItem post, int row_index, double x, double y) {
+        // 例: ポップオーバーメニューを開くなど
+        // var menu = new Gtk.PopoverMenu.from_model (...);
+        // menu.set_pointing_to (...);
+        // menu.popup ();
+        win.show_error_toast ("test- r");
     }
 
     private void set_post_widgets (ResRow.ResItem post, Gtk.Label header, ClickableLabel body) {
@@ -160,56 +233,105 @@ public class RessView : Adw.NavigationPage {
         initialized = true;
     }
 
-    private void rebuild_listbox_incremental () {
-        //clear_listbox ();
+    private void refresh_existing_rows_incremental (int existing_count) {
+        int i = 0;
 
-        int i = res_count;
         Idle.add (() => {
-        // Timeout.add (100, () => { // テスト用
-            // 1回のIdleで20行
-            int chunk = 20;
-            for (int n = 0; n < chunk && i < posts.size; n++, i++) {
+            int chunk = 30; // 一度に更新する行数。重ければ減らす
+
+            for (int n = 0; n < chunk && i < existing_count; n++, i++) {
                 var post = posts[i];
 
-                var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
-                row_box.margin_top = 6;
-                row_box.margin_bottom = 6;
-                row_box.margin_start = 8;
-                row_box.margin_end = 8;
+                var row = listview.get_row_at_index (i);
+                if (row == null)
+                    continue;
 
-                var header = new Gtk.Label (null);
-                header.use_markup = true;
-                header.xalign = 0.0f;
-                header.wrap = true;
-                header.wrap_mode = Pango.WrapMode.WORD_CHAR;
-                // header.ellipsize = Pango.EllipsizeMode.END;
+                var box = row.get_child () as Gtk.Box;
+                if (box == null)
+                    continue;
 
-                var body = new ClickableLabel ();
+                // 生成時: header が先、body が次に append している前提
+                Gtk.Widget? child = box.get_first_child ();
+                var header = child as Gtk.Label;
 
+                ClickableLabel? body = null;
+                if (child != null)
+                    body = child.get_next_sibling () as ClickableLabel;
 
-                set_post_widgets (post, header, body);
-
-                body.span_left_clicked.connect ((span) => {
-                    on_span_left_clicked (post, span);
-                });
-                body.span_right_clicked.connect ((span, x, y) => {
-                    on_span_right_clicked (post, span, x, y, body);
-                });
-
-                row_box.append (header);
-                row_box.append (body);
-
-                var row = new Gtk.ListBoxRow ();
-                row.set_child (row_box);
-                listview.append (row);
+                if (header != null && body != null) {
+                    set_post_widgets (post, header, body);
+                    // span の signal は生成時に1回だけ繋いでいるので、そのまま使える
+                }
             }
 
-            res_count = i;
+            return i < existing_count;
+        });
+    }
 
-            // まだ残ってれば次のIdleでもう少し作る
+    // 全構築用（初回やフルリロード用）
+    // 旧 clear & rebuild とほぼ同じ
+    private void rebuild_listbox_incremental_full () {
+        clear_listbox ();
+
+        int i = 0;
+        Idle.add (() => {
+            int chunk = 20;
+            for (int n = 0; n < chunk && i < posts.size; n++, i++) {
+                append_row_for_post (posts[i]);
+            }
+            res_count = i;
             return i < posts.size;
         });
     }
+
+    // 追加レスだけ作る用
+    private void rebuild_listbox_incremental_append_only () {
+        int i = res_count;
+        Idle.add (() => {
+            int chunk = 20;
+            for (int n = 0; n < chunk && i < posts.size; n++, i++) {
+                append_row_for_post (posts[i]);
+            }
+            res_count = i;
+            return i < posts.size;
+        });
+    }
+
+    // 共通の row 生成ヘルパ
+    private void append_row_for_post (ResRow.ResItem post) {
+        var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
+        row_box.margin_top = 6;
+        row_box.margin_bottom = 6;
+        row_box.margin_start = 8;
+        row_box.margin_end = 8;
+
+        var header = new Gtk.Label (null);
+        header.use_markup = true;
+        header.xalign = 0.0f;
+        header.wrap = true;
+        header.wrap_mode = Pango.WrapMode.WORD_CHAR;
+
+        var body = new ClickableLabel ();
+
+        set_post_widgets (post, header, body);
+
+        body.span_left_clicked.connect ((span) => {
+            on_span_left_clicked (post, span);
+        });
+        body.span_right_clicked.connect ((span, x, y) => {
+            on_span_right_clicked (post, span, x, y, body);
+        });
+
+        row_box.append (header);
+        row_box.append (body);
+
+        var row = new Gtk.ListBoxRow ();
+        row.set_child (row_box);
+
+        listview.append (row);
+    }
+
+
 
     private void clear_listbox () {
         Gtk.Widget? child = listview.get_first_child ();
@@ -220,14 +342,46 @@ public class RessView : Adw.NavigationPage {
         }
     }
 
+
+    private int last_post_count = 0;
     private async void reload () {
+
         this.title=_("Loading...");
+
+        save_scroll_position ();
+
         try {
             var cancellable = new Cancellable ();
-            posts = yield loader.load_from_url_async (url, cancellable);
+            var new_posts = yield loader.load_from_url_async (url, cancellable);
 
-            build_anchor_index (); // アンカー更新
-            rebuild_listbox_incremental ();
+            int old_count = (posts != null) ? posts.size : 0;
+            int new_count = new_posts.size;
+
+            // モデル差し替え
+            posts = new_posts;
+
+            // アンカー索引
+            build_anchor_index ();
+
+            if (old_count == 0) {
+                // 初回
+                res_count = 0;
+                rebuild_listbox_incremental_full ();
+            } else if (new_count < old_count) {
+                // スレが短くなった
+                clear_listbox ();
+                res_count = 0;
+                rebuild_listbox_incremental_full ();
+            } else {
+                // 1) 既存の行のヘッダ／本文だけ更新
+                refresh_existing_rows_incremental (old_count);
+
+                // 2) 新しく増えた分だけ row を追加
+                res_count = old_count;
+                rebuild_listbox_incremental_append_only ();
+            }
+
+            last_post_count = new_count;
 
             // DB更新 何件読んだかで未読がわかる
             try {
@@ -278,9 +432,21 @@ public class RessView : Adw.NavigationPage {
         }
     }
 
+    // spanとlist全体のクリックが競合するのを防ぐ
+    private bool suppress_row_click_once = false;
+    private void consume_row_click_once () {
+        suppress_row_click_once = true;
+        // 次のIdleで自動的に解除
+        Idle.add (() => {
+            suppress_row_click_once = false;
+            return false;
+        });
+    }
     // -------- Spanクリック時の動作 --------
 
     private void on_span_left_clicked (ResRow.ResItem post, Span span) {
+        consume_row_click_once ();
+
         switch (span.type) {
         case SpanType.REPLY:
             if (span.payload != null) {
@@ -309,6 +475,8 @@ public class RessView : Adw.NavigationPage {
     }
 
     private void on_span_right_clicked (ResRow.ResItem post, Span span, double x, double y, Gtk.Widget widget) {
+        consume_row_click_once ();
+
         switch (span.type) {
         case SpanType.REPLY:
             if (span.payload != null) {
@@ -336,7 +504,7 @@ public class RessView : Adw.NavigationPage {
         reply_to = new Gee.ArrayList<Gee.ArrayList<uint>> ();
         replied_from = new Gee.ArrayList<Gee.ArrayList<uint>> ();
 
-        // 0番は使用しないので埋める
+        // 0番ダミー
         reply_to.add (new Gee.ArrayList<uint> ());
         replied_from.add (new Gee.ArrayList<uint> ());
 
@@ -345,33 +513,47 @@ public class RessView : Adw.NavigationPage {
             replied_from.add (new Gee.ArrayList<uint> ());
         }
 
+        const int MAX_PER_POST = 10;
+
         for (int i = 0; i < n; ++i) {
             var post = posts[i];
-            uint from_index = post.index; // 1-based のはず
+            uint from_index = post.index; // 1-based の想定
+            if (from_index < 1 || from_index > n)
+                continue;
 
-            // ★ここ重要：get_spans() が内部でキャッシュする実装になっていると理想
+            int budget = MAX_PER_POST;
+
             var spans = post.get_spans ();
 
             foreach (var span in spans) {
+                if (budget <= 0)
+                    break;  // 10レス超え
+
                 if (span.type != SpanType.REPLY || span.payload == null)
                     continue;
 
-                var targets = parse_reply_payload (span.payload, n);
+                // この span からは "budget" 件まで取り出す
+                var targets = parse_reply_payload (span.payload, n, budget);
 
                 foreach (uint t in targets) {
-                    // from_index -> t という矢印
-                    reply_to[(int) from_index].add (t);
-                    replied_from[(int) t].add (from_index);
+                    reply_to[(int)from_index].add (t);
+                    replied_from[(int)t].add (from_index);
                 }
+
+                budget -= targets.size;
             }
         }
     }
 
+
     // span から複数アンカー番号を取る
-    private Gee.ArrayList<uint> parse_reply_payload (string payload, int max_index) {
+    // max_targets: この span から何個まで追加してよいか（残り枠）
+    private Gee.ArrayList<uint> parse_reply_payload (string payload,
+                                                     int max_index,
+                                                     int max_targets) {
         var list = new Gee.ArrayList<uint> ();
 
-        if (payload == null || payload.length == 0)
+        if (payload == null || payload.length == 0 || max_targets <= 0)
             return list;
 
         string s = payload;
@@ -380,6 +562,9 @@ public class RessView : Adw.NavigationPage {
             s = s.substring (2); // "1-3,5"
 
         foreach (var part0 in s.split (",")) {
+            if (list.size >= max_targets)
+                break;
+
             string part = part0.strip ();
             if (part.length == 0)
                 continue;
@@ -389,8 +574,11 @@ public class RessView : Adw.NavigationPage {
                 // 単発: "5"
                 try {
                     int n = int.parse (part);
-                    if (n >= 1 && n <= max_index)
+                    if (n >= 1 && n <= max_index) {
                         list.add ((uint) n);
+                        if (list.size >= max_targets)
+                            break;
+                    }
                 } catch (Error e) {}
             } else {
                 // 範囲: "1-3"
@@ -404,9 +592,14 @@ public class RessView : Adw.NavigationPage {
                         start = end;
                         end = tmp;
                     }
+
                     for (int i = start; i <= end; i++) {
-                        if (i >= 1 && i <= max_index)
-                            list.add ((uint) i);
+                        if (i < 1 || i > max_index)
+                            continue;
+
+                        list.add ((uint) i);
+                        if (list.size >= max_targets)
+                            break;
                     }
                 } catch (Error e) {}
             }
@@ -414,6 +607,7 @@ public class RessView : Adw.NavigationPage {
 
         return list;
     }
+
 
     private void scroll_to_post (uint index) {
         // ResRow.ResItem.index == 表示番号として検索
@@ -425,6 +619,102 @@ public class RessView : Adw.NavigationPage {
         //     }
         // }
     }
+
+    private void save_scroll_position () {
+        Gtk.ScrolledWindow? sw =
+            listview.get_ancestor (typeof (Gtk.ScrolledWindow)) as Gtk.ScrolledWindow;
+        if (sw == null)
+            return;
+
+        var adj = sw.vadjustment;
+        if (adj == null)
+            return;
+
+        saved_vadjustment = adj.value;
+    }
+
+    private void restore_scroll_position () {
+        Gtk.ScrolledWindow? sw =
+            listview.get_ancestor (typeof (Gtk.ScrolledWindow)) as Gtk.ScrolledWindow;
+        if (sw == null)
+            return;
+
+        var adj = sw.vadjustment;
+        if (adj == null)
+            return;
+
+        // 範囲からはみ出さないようにクランプ
+        double max = adj.upper - adj.page_size;
+        double v = saved_vadjustment;
+
+        if (v < adj.lower)
+            v = adj.lower;
+        if (v > max)
+            v = max;
+
+        adj.value = v;
+    }
+
+    // 指定した root からアンカーのぶんだけツリー順に index を並べる
+    // order: 表示順の index 配列
+    // depths: 各 index の深さ (0 = root)
+    // parent: child -> parent のマップ（root は登録されない）
+    public void build_reply_tree_indices (uint root_index,
+                                          out Gee.ArrayList<uint> order,
+                                          out Gee.ArrayList<int> depths,
+                                          out Gee.HashMap<uint,uint> parent) {
+        order = new Gee.ArrayList<uint> ();
+        depths = new Gee.ArrayList<int> ();
+        parent = new Gee.HashMap<uint,uint> ();
+
+        int n = posts.size;
+        if (n == 0)
+            return;
+
+        if (root_index < 1 || root_index > (uint) n)
+            return;
+
+        // 1〜n 用の visited 配列
+        bool[] visited = new bool[n + 1];
+
+        dfs_build_tree (root_index, 0, visited, order, depths, parent);
+    }
+
+    private void dfs_build_tree (uint idx,
+                                 int depth,
+                                 bool[] visited,
+                                 Gee.ArrayList<uint> order,
+                                 Gee.ArrayList<int> depths,
+                                 Gee.HashMap<uint,uint> parent) {
+        if (idx >= (uint) visited.length)
+            return;
+
+        if (visited[idx])
+            return;
+        visited[idx] = true;
+
+        // 自分を追加
+        order.add (idx);
+        depths.add (depth);
+
+        // このレスにアンカーしているレスたち（= 子ノード）
+        if (idx >= (uint) replied_from.size)
+            return;
+
+        var children = replied_from[(int) idx]; // Gee.ArrayList<uint>
+
+        foreach (uint child in children) {
+            // すでにどこかの経路で出てきたレスはスキップ
+            if (visited[child])
+                continue;
+
+            // ツリー上での親を記録
+            parent[child] = idx;
+
+            dfs_build_tree (child, depth + 1, visited, order, depths, parent);
+        }
+    }
+
 
     [GtkCallback]
     private void on_add_click () {
