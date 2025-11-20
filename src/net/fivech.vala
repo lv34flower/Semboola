@@ -339,7 +339,6 @@ namespace FiveCh {
 
             var status = msg.get_status ();
             if (!(status == 200 || status == 301 || status == 302)) {
-                print(text);
                 throw new IOError.FAILED ("POST failed: %u — %s\n%s"
                     .printf ((uint) status, msg.get_reason_phrase (), text));
             }
@@ -701,7 +700,6 @@ namespace FiveCh {
             string raw = (string) data;
             if (raw.validate ((ssize_t) sz)) {
                 used_encoding = "UTF-8";
-                print("utf8");
                 // len バイトだけをコピーして NUL 終端された string を作る
                 // ※ GLib.strndup ではなく、string.ndup を使う
                 string s = raw.ndup (sz);
@@ -713,7 +711,6 @@ namespace FiveCh {
                 try {
                     string converted = convert_bytes (data, sz, "UTF-8//IGNORE", enc);
                     used_encoding = enc;
-                    print(enc);
                     return converted;
                 } catch (Error e) { }
             }
@@ -1073,7 +1070,8 @@ namespace FiveCh {
             try {
                 // >>数字 or URL
                 _token_regex = new GLib.Regex (
-                    "(>>[0-9]+)|(https?://[^\\s<>\"']+)",
+                    // >>1 / >>1-3 / >>1,2,3 / >>1-3,5-7,...
+                    "(>>(?:[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*))|(https?://[^\\s<>\"']+)",
                     GLib.RegexCompileFlags.CASELESS | GLib.RegexCompileFlags.MULTILINE
                 );
             } catch (Error e) {

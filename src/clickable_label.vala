@@ -4,8 +4,11 @@ using Pango;
 
 public enum SpanType {
     NORMAL,
-    REPLY, // >>123
-    URL
+    REPLY,          //
+    URL,            // URL
+    URL_IMAGE,      // 画像直リン
+    URL_BOARD,      // 板URL
+    URL_THREAD      // スレURL
 }
 
 public class Span : Object {

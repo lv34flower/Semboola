@@ -27,6 +27,8 @@
         <child>
           <object class="GtkLabel" id="dtime">
             <property name="css-classes">dim-label</property>
+            <property name="wrap">True</property>
+            <property name="wrap-mode">char</property>
           </object>
         </child>
         <child>

@@ -37,6 +37,12 @@ public class RessView : Adw.NavigationPage {
     private GLib.ListStore store = new GLib.ListStore (typeof (ResRow.ResItem));
     private Gee.ArrayList<ResRow.ResItem> posts;
 
+    // from: レス i が、どのレスにアンカーしているか   (i -> targets)
+    private Gee.ArrayList<Gee.ArrayList<uint>> reply_to;
+
+    // to:   レス i が、どのレスからアンカーされているか (sources -> i)
+    private Gee.ArrayList<Gee.ArrayList<uint>> replied_from;
+
     // 初期化フラグ
     private bool initialized = false;
 
@@ -128,8 +134,16 @@ public class RessView : Adw.NavigationPage {
         string id_part = (post.id != "")
             ? @" <span foreground='#c03030'>ID:$(Markup.escape_text (post.id))</span>"
             : "";
-        print (safe_trip);
-        header.set_markup (@"<b>$(post.index)</b> <b>$safe_name</b>$safe_trip $safe_date$id_part");
+
+        uint anchor_count = 0;
+        string anchor_count_str = "";
+        if (replied_from != null && post.index < replied_from.size) {
+            anchor_count = (uint) replied_from[(int) post.index].size;
+            if (anchor_count > 0)
+                anchor_count_str = "(" + anchor_count.to_string () + ")";
+        }
+
+        header.set_markup (@"<b>$(post.index)</b><span foreground='#FF5555'>$(anchor_count_str)</span> <b>$safe_name</b>$safe_trip $safe_date$id_part");
 
         var spans = post.get_spans ();
         body.set_spans (spans);
@@ -212,6 +226,7 @@ public class RessView : Adw.NavigationPage {
             var cancellable = new Cancellable ();
             posts = yield loader.load_from_url_async (url, cancellable);
 
+            build_anchor_index (); // アンカー更新
             rebuild_listbox_incremental ();
 
             // DB更新 何件読んだかで未読がわかる
@@ -298,17 +313,14 @@ public class RessView : Adw.NavigationPage {
         case SpanType.REPLY:
             if (span.payload != null) {
                 try {
-                    uint target = (uint) int.parse (span.payload);
-                    scroll_to_post (target);
+
                 } catch (Error e) {}
             }
             break;
         case SpanType.URL:
             if (span.payload != null) {
                 try {
-                    var launcher = new Gtk.UriLauncher (span.payload);
-                    Gtk.Window? parent = this.get_root () as Gtk.Window;
-                    launcher.launch.begin (parent, null);
+
                 } catch (Error e) {}
             }
             break;
@@ -317,6 +329,91 @@ public class RessView : Adw.NavigationPage {
         }
     }
 
+    // アンカー一覧を保持
+    private void build_anchor_index () {
+        int n = posts.size;
+
+        reply_to = new Gee.ArrayList<Gee.ArrayList<uint>> ();
+        replied_from = new Gee.ArrayList<Gee.ArrayList<uint>> ();
+
+        // 0番は使用しないので埋める
+        reply_to.add (new Gee.ArrayList<uint> ());
+        replied_from.add (new Gee.ArrayList<uint> ());
+
+        for (int i = 1; i <= n; ++i) {
+            reply_to.add (new Gee.ArrayList<uint> ());
+            replied_from.add (new Gee.ArrayList<uint> ());
+        }
+
+        for (int i = 0; i < n; ++i) {
+            var post = posts[i];
+            uint from_index = post.index; // 1-based のはず
+
+            // ★ここ重要：get_spans() が内部でキャッシュする実装になっていると理想
+            var spans = post.get_spans ();
+
+            foreach (var span in spans) {
+                if (span.type != SpanType.REPLY || span.payload == null)
+                    continue;
+
+                var targets = parse_reply_payload (span.payload, n);
+
+                foreach (uint t in targets) {
+                    // from_index -> t という矢印
+                    reply_to[(int) from_index].add (t);
+                    replied_from[(int) t].add (from_index);
+                }
+            }
+        }
+    }
+
+    // span から複数アンカー番号を取る
+    private Gee.ArrayList<uint> parse_reply_payload (string payload, int max_index) {
+        var list = new Gee.ArrayList<uint> ();
+
+        if (payload == null || payload.length == 0)
+            return list;
+
+        string s = payload;
+
+        if (s.has_prefix (">>"))
+            s = s.substring (2); // "1-3,5"
+
+        foreach (var part0 in s.split (",")) {
+            string part = part0.strip ();
+            if (part.length == 0)
+                continue;
+
+            int dash = part.index_of ("-");
+            if (dash < 0) {
+                // 単発: "5"
+                try {
+                    int n = int.parse (part);
+                    if (n >= 1 && n <= max_index)
+                        list.add ((uint) n);
+                } catch (Error e) {}
+            } else {
+                // 範囲: "1-3"
+                string a = part.substring (0, dash).strip ();
+                string b = part.substring (dash + 1).strip ();
+                try {
+                    int start = int.parse (a);
+                    int end   = int.parse (b);
+                    if (end < start) {
+                        int tmp = start;
+                        start = end;
+                        end = tmp;
+                    }
+                    for (int i = start; i <= end; i++) {
+                        if (i >= 1 && i <= max_index)
+                            list.add ((uint) i);
+                    }
+                } catch (Error e) {}
+            }
+        }
+
+        return list;
+    }
 
     private void scroll_to_post (uint index) {
         // ResRow.ResItem.index == 表示番号として検索
