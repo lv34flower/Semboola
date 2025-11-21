@@ -65,9 +65,9 @@ public class RessView : Adw.NavigationPage {
 
         loader = new DatLoader ();
 
+        // マウスクリック
         var click = new Gtk.GestureClick ();
         click.set_button (0);
-
         click.released.connect ((n_press, x, y) => {
 
             // spanと競合しないよう
@@ -104,6 +104,31 @@ public class RessView : Adw.NavigationPage {
         });
 
         listview.add_controller (click);
+
+        // タッチで右クリックエミュレーション
+        var longp = new Gtk.GestureLongPress ();
+        // タッチ専用にしておくとマウスの長押しには反応しない
+        longp.set_touch_only (true);
+
+        longp.pressed.connect ((x, y) => {
+            if (suppress_row_click_once)
+                return;
+
+            var row = listview.get_row_at_y ((int) y);
+            if (row == null)
+                return;
+
+            int idx = row.get_index ();
+            if (idx < 0 || idx >= posts.size)
+                return;
+
+            var post = posts[idx];
+
+            // 「タッチ長押し＝右クリック」と見なして同じハンドラへ
+            on_row_right_clicked (post, idx, x, y);
+        });
+
+        listview.add_controller (longp);
 
         // var selection = new Gtk.SingleSelection (store);
         // selection.autoselect = false;
