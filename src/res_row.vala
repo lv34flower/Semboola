@@ -24,7 +24,6 @@ public class ResRow : Gtk.Box {
     public class ResItem : Object {
         public uint index { get; construct; }
         public string name { get; construct; }
-        public string trip { get; construct; }
         public string mail { get; construct; }
         public string date { get; construct; }
         public string id { get; construct; }
@@ -32,12 +31,11 @@ public class ResRow : Gtk.Box {
 
         public ResItem(uint index,
                        string name,
-                       string trip,
                        string mail,
                        string date,
                        string id,
                        string body) {
-            Object(index: index, name: name, trip: trip, mail: mail, date: date, id: id, body: body);
+            Object(index: index, name: name, mail: mail, date: date, id: id, body: body);
         }
 
         // キャッシュ

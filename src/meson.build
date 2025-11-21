@@ -9,6 +9,7 @@ Semboola_sources = [
   'new_thread.vala',
   'thread_row.vala',
   'ress.vala',
+  'replies.vala',
   'res_row.vala',
   'new_res.vala',
   'clickable_label.vala',

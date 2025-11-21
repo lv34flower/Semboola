@@ -74,6 +74,12 @@ public class RessView : Adw.NavigationPage {
             if (suppress_row_click_once)
                 return;
 
+            // LongPress 後の「離した左クリック」は1回だけ無視する
+            if (suppress_after_long) {
+                suppress_after_long = false;
+                return;
+            }
+
             // どのボタンか
             uint button = click.get_current_button ();
 
@@ -123,6 +129,8 @@ public class RessView : Adw.NavigationPage {
                 return;
 
             var post = posts[idx];
+
+            suppress_after_long = true;
 
             // 「タッチ長押し＝右クリック」と見なして同じハンドラへ
             on_row_right_clicked (post, idx, x, y);
@@ -211,8 +219,7 @@ public class RessView : Adw.NavigationPage {
             // win.push_page (tree_view);
             win.show_error_toast ("test- 2c");
         } else {
-            // シングルクリックでスクロールだけとか
-            win.show_error_toast ("test- 1c");
+            open_reply_tree_page (post.index);
         }
     }
 
@@ -227,7 +234,6 @@ public class RessView : Adw.NavigationPage {
 
     private void set_post_widgets (ResRow.ResItem post, Gtk.Label header, ClickableLabel body) {
         string safe_name = Markup.escape_text (post.name);
-        string safe_trip = Markup.escape_text (post.trip);
         string safe_date = Markup.escape_text (post.date);
         string id_part = (post.id != "")
             ? @" <span foreground='#c03030'>ID:$(Markup.escape_text (post.id))</span>"
@@ -241,7 +247,7 @@ public class RessView : Adw.NavigationPage {
                 anchor_count_str = "(" + anchor_count.to_string () + ")";
         }
 
-        header.set_markup (@"<b>$(post.index)</b><span foreground='#FF5555'>$(anchor_count_str)</span> <b>$safe_name</b>$safe_trip $safe_date$id_part");
+        header.set_markup (@"<b>$(post.index)</b><span foreground='#FF5555'>$(anchor_count_str)</span> $(post.name) $safe_date$id_part");
 
         var spans = post.get_spans ();
         body.set_spans (spans);
@@ -328,7 +334,7 @@ public class RessView : Adw.NavigationPage {
         row_box.margin_top = 6;
         row_box.margin_bottom = 6;
         row_box.margin_start = 8;
-        row_box.margin_end = 8;
+        row_box.margin_end = 16;
 
         var header = new Gtk.Label (null);
         header.use_markup = true;
@@ -467,10 +473,12 @@ public class RessView : Adw.NavigationPage {
             return false;
         });
     }
+
+    // 長押しと左クリックが競合するのを防ぐ
+    private bool suppress_after_long = false;
     // -------- Spanクリック時の動作 --------
 
     private void on_span_left_clicked (ResRow.ResItem post, Span span) {
-        consume_row_click_once ();
 
         switch (span.type) {
         case SpanType.REPLY:
@@ -495,8 +503,9 @@ public class RessView : Adw.NavigationPage {
             }
             break;
         default:
-            break;
+            return;
         }
+        consume_row_click_once ();
     }
 
     private void on_span_right_clicked (ResRow.ResItem post, Span span, double x, double y, Gtk.Widget widget) {
@@ -658,27 +667,115 @@ public class RessView : Adw.NavigationPage {
         saved_vadjustment = adj.value;
     }
 
-    private void restore_scroll_position () {
-        Gtk.ScrolledWindow? sw =
-            listview.get_ancestor (typeof (Gtk.ScrolledWindow)) as Gtk.ScrolledWindow;
-        if (sw == null)
+    private void open_reply_tree_page (uint root_index) {
+        // ツリー用 ListBox を作成
+        var tree_list = create_reply_tree_listbox (root_index);
+
+        if (tree_list == null)
             return;
 
-        var adj = sw.vadjustment;
-        if (adj == null)
+        // 次の画面へ遷移
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
             return;
-
-        // 範囲からはみ出さないようにクランプ
-        double max = adj.upper - adj.page_size;
-        double v = saved_vadjustment;
-
-        if (v < adj.lower)
-            v = adj.lower;
-        if (v > max)
-            v = max;
-
-        adj.value = v;
+        }
+        nav.push(new replies (name, tree_list));
     }
+
+    public Gtk.ListBox create_reply_tree_listbox (uint start_idx) {
+        uint root = find_conversation_root (start_idx);
+
+        Gee.ArrayList<uint> order;
+        Gee.ArrayList<int> depths;
+        Gee.HashMap<uint,uint> parent;
+
+        build_reply_tree_indices (root, out order, out depths, out parent);
+
+        var tree_list = new Gtk.ListBox ();
+        tree_list.show_separators = true;
+        tree_list.selection_mode = Gtk.SelectionMode.NONE;
+
+        if (order.size == 1)
+            return null;
+
+        for (int i = 0; i < order.size; i++) {
+            uint idx = order[i];
+            int depth = depths[i];
+
+            // posts は 0-based, index は 1-based
+            var post = posts[(int) idx - 1];
+
+            var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
+            row_box.margin_top = 6;
+            row_box.margin_bottom = 6;
+
+            // ツリーの段差ぶんインデント
+            int indent_px = 0 * depth;  // しない
+            row_box.margin_start = 8 + indent_px;
+            row_box.margin_end = 16;
+
+            var header = new Gtk.Label (null);
+            header.use_markup = true;
+            header.xalign = 0.0f;
+            header.wrap = true;
+            header.wrap_mode = Pango.WrapMode.WORD_CHAR;
+
+            var body = new ClickableLabel ();
+
+            // 普段と同じ見出し・本文生成
+            set_post_widgets (post, header, body);
+
+            row_box.append (header);
+            row_box.append (body);
+
+            var row = new Gtk.ListBoxRow ();
+            row.set_child (row_box);
+            tree_list.append (row);
+        }
+
+        return tree_list;
+    }
+
+    // start_index から上方向に辿っていって、会話のrootを決める
+    private uint find_conversation_root (uint start_index) {
+        int n = posts.size;
+        if (n == 0)
+            return start_index;
+
+        // 1..n 用 visited でループ対策
+        bool[] visited = new bool[n + 1];
+
+        uint current = start_index;
+
+        while (true) {
+            if (current < 1 || current > (uint) n)
+                break;
+
+            int ci = (int) current;
+            if (visited[ci])
+                break;
+            visited[ci] = true;
+
+            if (ci >= reply_to.size)
+                break;
+
+            var parents = reply_to[ci];
+            if (parents == null || parents.size == 0)
+                break;
+
+            // 複数アンカーの場合は「いちばん古そうな親」 (= 最小 index) を採用
+            uint next = parents[0];
+            foreach (uint p in parents) {
+                if (p < next)
+                    next = p;
+            }
+
+            current = next;
+        }
+
+        return current;
+    }
+
 
     // 指定した root からアンカーのぶんだけツリー順に index を並べる
     // order: 表示順の index 配列
@@ -730,8 +827,8 @@ public class RessView : Adw.NavigationPage {
 
         foreach (uint child in children) {
             // すでにどこかの経路で出てきたレスはスキップ
-            if (visited[child])
-                continue;
+            // if (visited[child])
+            //     continue;
 
             // ツリー上での親を記録
             parent[child] = idx;
@@ -739,7 +836,6 @@ public class RessView : Adw.NavigationPage {
             dfs_build_tree (child, depth + 1, visited, order, depths, parent);
         }
     }
-
 
     [GtkCallback]
     private void on_add_click () {

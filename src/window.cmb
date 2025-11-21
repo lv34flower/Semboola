@@ -14,5 +14,5 @@
     <requires>BoardsView</requires>
   </ui>
   <ui template-class="thread_hist" filename="thread_hist.ui" sha256="b6e9fd3d1a1d9729eeb2ab91f68511f17bd7b6ebd25b5185b8bfebe48d2f1008"/>
-  <ui template-class="RessView" filename="replies.ui" sha256="85c4c831e208065e2e4272865be2b6694d9c3f773037ed8b6a489495c16fc4f0"/>
+  <ui template-class="replies" filename="replies.ui" sha256="4c157e045fadcc351706038b07901427b5ee0d9d0b4ceb8dc4727ad3ac7023e1"/>
 </cambalache-project>
