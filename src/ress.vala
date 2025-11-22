@@ -43,6 +43,22 @@ public class RessView : Adw.NavigationPage {
     // to:   レス i が、どのレスからアンカーされているか (sources -> i)
     private Gee.ArrayList<Gee.ArrayList<uint>> replied_from;
 
+    // ID このIDが何レスしているか
+    private class IdStats : Object {
+        public string id   { get; construct; }
+        public uint   nth  { get; construct; } // このIDの何番目のレスか
+        public uint   total{ get; construct; } // このIDが全部で何レスか
+
+        public IdStats (string id, uint nth, uint total) {
+            Object (id: id, nth: nth, total: total);
+        }
+    }
+    // ID -> そのIDのレスindex一覧（1-based ResItem.index）
+    private Gee.HashMap<string,Gee.ArrayList<uint>> id_to_indices;
+
+    // index(1-based) -> そのレスの x/x 情報
+    private Gee.HashMap<uint,IdStats> index_to_id_stats;
+
     // 初期化フラグ
     private bool initialized = false;
 
@@ -239,6 +255,11 @@ public class RessView : Adw.NavigationPage {
             ? @" <span foreground='#c03030'>ID:$(Markup.escape_text (post.id))</span>"
             : "";
 
+        IdStats? stats = null;
+        if (index_to_id_stats != null && index_to_id_stats.has_key (post.index)) {
+            stats = index_to_id_stats[post.index];
+        }
+
         uint anchor_count = 0;
         string anchor_count_str = "";
         if (replied_from != null && post.index < replied_from.size) {
@@ -247,7 +268,11 @@ public class RessView : Adw.NavigationPage {
                 anchor_count_str = "(" + anchor_count.to_string () + ")";
         }
 
-        header.set_markup (@"<b>$(post.index)</b><span foreground='#FF5555'>$(anchor_count_str)</span> $(post.name) $safe_date$id_part");
+        if (stats == null || stats.total < 2) {
+            header.set_markup (@"<b>$(post.index)</b><span foreground='#FF5555'>$(anchor_count_str)</span> $(post.name) $safe_date$id_part");
+        } else {
+            header.set_markup (@"<b>$(post.index)</b><span foreground='#FF5555'>$(anchor_count_str)</span> $(post.name) $safe_date$id_part ($(stats.nth)/$(stats.total))");
+        }
 
         var spans = post.get_spans ();
         body.set_spans (spans);
@@ -394,6 +419,10 @@ public class RessView : Adw.NavigationPage {
 
             // アンカー索引
             build_anchor_index ();
+
+            // ID索引
+            build_id_index ();
+
 
             if (old_count == 0) {
                 // 初回
@@ -649,6 +678,47 @@ public class RessView : Adw.NavigationPage {
         return list;
     }
 
+    // IDごとの索引を撮る
+    private void build_id_index () {
+        id_to_indices = new Gee.HashMap<string,Gee.ArrayList<uint>> (
+            (Gee.HashDataFunc<string>) GLib.str_hash,
+            (Gee.EqualDataFunc<string>) GLib.str_equal
+        );
+        index_to_id_stats = new Gee.HashMap<uint,IdStats> ();
+
+        int n = posts.size;
+        for (int i = 0; i < n; i++) {
+            var post = posts[i];
+            string id = post.id;
+
+            if (id == null || id == "")
+                continue; // IDなしはスキップ
+
+            Gee.ArrayList<uint>? list;
+            if (id_to_indices.has_key (id)) {
+                list = id_to_indices[id];
+            } else {
+                list = new Gee.ArrayList<uint> ();
+                id_to_indices[id] = list;
+            }
+
+            list.add (post.index);  // ResItem.index は 1-based の想定
+        }
+
+        // index -> (nth, total) を埋める
+        foreach (string id in id_to_indices.keys) {
+            var list = id_to_indices[id];
+            uint total = (uint) list.size;
+
+            for (int i = 0; i < list.size; i++) {
+                uint idx = list[i];
+                uint nth = (uint) (i + 1);
+
+                index_to_id_stats[idx] = new IdStats (id, nth, total);
+            }
+        }
+    }
+
 
     private void scroll_to_post (uint index) {
         // ResRow.ResItem.index == 表示番号として検索
@@ -695,12 +765,11 @@ public class RessView : Adw.NavigationPage {
         id_list.show_separators = true;
         id_list.selection_mode = Gtk.SelectionMode.NONE;
 
-        foreach (var p in posts) {
-            if (p.id == id) {
-                var row = create_reply_row (p);
-
-                id_list.append (row);
-            }
+        var idxs = id_to_indices[id];
+        foreach (var idx in idxs) {
+            var p = posts[(int) idx-1];
+            var row = create_reply_row (p);
+            id_list.append (row);
         }
         return id_list;
     }
