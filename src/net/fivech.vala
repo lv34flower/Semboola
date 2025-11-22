@@ -859,25 +859,21 @@ namespace FiveCh {
         public static string encode_html_entities (string src) {
             var sb = new StringBuilder ();
 
-            for (int i = 0; i < src.length; ++i) {
-                unichar ch = src.get_char (i);
+            int index = 0;
+            unichar ch;
 
-                if ( (int)ch == -1) {
-                    continue;
-                }
-                // 絵文字など、たいてい U+10000 以上の領域にいる文字だけ数値参照にする
+            while (src.get_next_char (ref index, out ch)) {
+                // 絵文字など U+10000 以上だけエンティティにする
                 if (ch > 0xFFFF) {
                     sb.append_printf ("&#%d;", (int) ch);
                 } else {
-                    // それ以外（日本語や通常の記号など）はそのまま
                     sb.append_unichar (ch);
                 }
-
-
             }
 
-            return sb.str;
-        }
+    return sb.str;
+}
+
 
     }
 
