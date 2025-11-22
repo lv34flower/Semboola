@@ -40,6 +40,14 @@ public class cookie_confirm : Adw.ApplicationWindow {
         html = h;
         base_uri = bu;
 
+        WebKit.NetworkSession session = webview.network_session;
+        WebKit.CookieManager cookie_manager = session.get_cookie_manager ();
+
+        cookie_manager.set_persistent_storage (
+            FiveCh.cookie,
+            WebKit.CookiePersistentStorage.TEXT
+        );
+
         // テンプレート(=webview)が生えた後で呼ばれる
         webview.load_html (html, base_uri);
     }

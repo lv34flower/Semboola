@@ -61,55 +61,59 @@ public class new_res : Adw.ApplicationWindow {
 
     [GtkCallback]
     public void on_post_click () {
+        this.set_sensitive (false); // 操作不可にします
         post.begin ();
     }
 
     public async void post () {
-        var client = new FiveCh.Client ();
-        FiveCh.Client.PostResult? res;
         try {
-            var opt = new FiveCh.PostOptions ();
-            opt.submit_label = "書き込む";
-            res = yield client.post_with_analysis_async (board,
-                                                        board.board_key,   // bbs
-                                                        FiveCh.DatLoader.guess_threadkey_from_url (url), // key
-                                                        textbuffer.text, //text
-                                                        name.text,   //name
-                                                        mail.text,  //mail
-                                                        null,  //subject
-                                                        opt
-                                                        );
-        } catch (Error e) {
-            //win.show_error_toast (_("Invalid error."));
-            win.show_error_toast (e.message);
-            print(e.message);
-            return;
+            var client = new FiveCh.Client ();
+            FiveCh.Client.PostResult? res;
+            try {
+                var opt = new FiveCh.PostOptions ();
+                opt.submit_label = "書き込む";
+                res = yield client.post_with_analysis_async (board,
+                                                            board.board_key,   // bbs
+                                                            FiveCh.DatLoader.guess_threadkey_from_url (url), // key
+                                                            textbuffer.text, //text
+                                                            name.text,   //name
+                                                            mail.text,  //mail
+                                                            null,  //subject
+                                                            opt
+                                                            );
+            } catch (Error e) {
+                //win.show_error_toast (_("Invalid error."));
+                win.show_error_toast (e.message);
+                print(e.message);
+                return;
+            }
+
+            // 分岐
+            if (res == null) {
+                win.show_error_toast (_("Invalid error."));
+                return;
+            }
+            switch (res.kind) {
+            case FiveCh.Client.PostPageKind.OK:
+                // 普通に成功
+                submitted ();
+                this.close ();
+                break;
+
+            case FiveCh.Client.PostPageKind.ERROR:
+            case FiveCh.Client.PostPageKind.CONFIRM:
+                // エラーまたは確認
+                var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
+                var popup = new cookie_confirm (window, g_app, res.html, board.bbs_cgi_url ());
+                popup.repost.connect (() => {
+                    post.begin ();
+                });
+                popup.present ();
+
+                break;
+            }
+        } finally {
+            this.set_sensitive (true); // 最後は操作可能にする
         }
-
-        // 分岐
-        if (res == null) {
-            win.show_error_toast (_("Invalid error."));
-            return;
-        }
-        switch (res.kind) {
-        case FiveCh.Client.PostPageKind.OK:
-            // 普通に成功
-            submitted ();
-            this.close ();
-            break;
-
-        case FiveCh.Client.PostPageKind.ERROR:
-        case FiveCh.Client.PostPageKind.CONFIRM:
-            // エラーまたは確認
-            var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
-            var popup = new cookie_confirm (window, g_app, res.html, board.bbs_cgi_url ());
-            popup.repost.connect (() => {
-                post.begin ();
-            });
-            popup.present ();
-
-            break;
-        }
-
     }
 }

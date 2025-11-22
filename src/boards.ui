@@ -38,7 +38,7 @@
                 <property name="label" translatable="yes">Add</property>
                 <child>
                   <object class="GtkImage">
-                    <property name="icon-name">accept_time_event-symbolic</property>
+                    <property name="icon-name">preferences-system-time-symbolic</property>
                   </object>
                 </child>
               </object>
