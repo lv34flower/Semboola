@@ -154,56 +154,6 @@ public class RessView : Adw.NavigationPage {
 
         listview.add_controller (longp);
 
-        // var selection = new Gtk.SingleSelection (store);
-        // selection.autoselect = false;
-        // selection.can_unselect = true;
-
-        // var factory = new Gtk.SignalListItemFactory ();
-        // factory.setup.connect (on_factory_setup);
-        // factory.bind.connect (on_factory_bind);
-
-        // listview.model = selection;
-        // listview.factory = factory;
-
-
-        // bind_model 使用
-        // listview.bind_model (store, (obj) => {
-        //     var post = (ResRow.ResItem) obj;
-
-        //     var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
-        //     row_box.margin_top = 6;
-        //     row_box.margin_bottom = 6;
-        //     row_box.margin_start = 8;
-        //     row_box.margin_end = 16;
-
-        //     var header = new Gtk.Label (null);
-        //     header.use_markup = true;
-        //     header.xalign = 0.0f;
-        //     header.wrap = true;
-        //     header.wrap_mode = Pango.WrapMode.WORD_CHAR;
-            //header.ellipsize = Pango.EllipsizeMode.END;
-
-        //     var body = new ClickableLabel ();
-
-            // ここで span イベント接続（ListView版と同じノリ）
-        //     body.span_left_clicked.connect ((span) => {
-        //         on_span_left_clicked (post, span);
-        //     });
-        //     body.span_right_clicked.connect ((span, x, y) => {
-        //         on_span_right_clicked (post, span, x, y, body);
-        //     });
-
-            // ★ここが抜けてた：中身を row_box に入れる
-        //     row_box.append (header);
-        //     row_box.append (body);
-
-            // 中身セット
-        //     set_post_widgets (post, header, body);
-
-        //     var row = new Gtk.ListBoxRow ();
-        //     row.set_child (row_box);
-        //     return row;
-        // });
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
         this.shown.connect (() => {
             win = this.get_root() as Semboola.Window;
@@ -217,6 +167,14 @@ public class RessView : Adw.NavigationPage {
 
         // 行がアクティブ化されたとき（pos は行番号）
         // listview.activate.connect (on_row_activated);
+    }
+
+    // ヘッダをクリック
+    private void on_header_clicked (ResRow.ResItem post, int row_index, int n_press) {
+        print (post.id);
+        if (post.id == null || post.id == "")
+            return;
+        open_id_page(post.id);
     }
 
     // 左クリック
@@ -372,6 +330,27 @@ public class RessView : Adw.NavigationPage {
 
         set_post_widgets (post, header, body);
 
+        var header_click = new Gtk.GestureClick ();
+        header_click.set_button (0);
+
+        header_click.released.connect ((n_press, x, y) => {
+            consume_row_click_once ();
+
+            var row = header.get_ancestor (typeof (Gtk.ListBoxRow)) as Gtk.ListBoxRow;
+            if (row == null)
+                return;
+
+            int idx = row.get_index ();
+            if (idx < 0 || idx >= posts.size)
+                return;
+
+            var p = posts[idx];
+
+            on_header_clicked (p, idx, n_press);
+        });
+
+        header.add_controller (header_click);
+
         body.span_left_clicked.connect ((span) => {
             on_span_left_clicked (post, span);
         });
@@ -506,6 +485,7 @@ public class RessView : Adw.NavigationPage {
 
     // 長押しと左クリックが競合するのを防ぐ
     private bool suppress_after_long = false;
+
     // -------- Spanクリック時の動作 --------
 
     private void on_span_left_clicked (ResRow.ResItem post, Span span) {
