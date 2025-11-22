@@ -330,6 +330,7 @@ public class RessView : Adw.NavigationPage {
 
     // 共通の row 生成ヘルパ
     private void append_row_for_post (ResRow.ResItem post) {
+
         var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
         row_box.margin_top = 6;
         row_box.margin_bottom = 6;
@@ -502,6 +503,12 @@ public class RessView : Adw.NavigationPage {
                 }
             }
             break;
+        case SpanType.ID:
+            if (span.payload != null) {
+                var target = span.payload.substring (3, -1);
+                open_id_page(target);
+            }
+            break;
         default:
             return;
         }
@@ -667,6 +674,37 @@ public class RessView : Adw.NavigationPage {
         saved_vadjustment = adj.value;
     }
 
+    private void open_id_page (string id) {
+        // ツリー用 ListBox を作成
+        var id_list = create_id_listbox (id);
+
+        if (id_list == null)
+            return;
+
+        // 次の画面へ遷移
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
+            return;
+        }
+        nav.push(new replies (name, id_list));
+    }
+
+    public Gtk.ListBox create_id_listbox (string id) {
+
+        var id_list = new Gtk.ListBox ();
+        id_list.show_separators = true;
+        id_list.selection_mode = Gtk.SelectionMode.NONE;
+
+        foreach (var p in posts) {
+            if (p.id == id) {
+                var row = create_reply_row (p);
+
+                id_list.append (row);
+            }
+        }
+        return id_list;
+    }
+
     private void open_reply_tree_page (uint root_index) {
         // ツリー用 ListBox を作成
         var tree_list = create_reply_tree_listbox (root_index);
@@ -705,31 +743,8 @@ public class RessView : Adw.NavigationPage {
             // posts は 0-based, index は 1-based
             var post = posts[(int) idx - 1];
 
-            var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
-            row_box.margin_top = 6;
-            row_box.margin_bottom = 6;
+            var row = create_reply_row (post);
 
-            // ツリーの段差ぶんインデント
-            int indent_px = 0 * depth;  // しない
-            row_box.margin_start = 8 + indent_px;
-            row_box.margin_end = 16;
-
-            var header = new Gtk.Label (null);
-            header.use_markup = true;
-            header.xalign = 0.0f;
-            header.wrap = true;
-            header.wrap_mode = Pango.WrapMode.WORD_CHAR;
-
-            var body = new ClickableLabel ();
-
-            // 普段と同じ見出し・本文生成
-            set_post_widgets (post, header, body);
-
-            row_box.append (header);
-            row_box.append (body);
-
-            var row = new Gtk.ListBoxRow ();
-            row.set_child (row_box);
             tree_list.append (row);
         }
 
@@ -835,6 +850,34 @@ public class RessView : Adw.NavigationPage {
 
             dfs_build_tree (child, depth + 1, visited, order, depths, parent);
         }
+    }
+
+    private Gtk.ListBoxRow create_reply_row (ResRow.ResItem post) {
+        var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
+        row_box.margin_top = 6;
+        row_box.margin_bottom = 6;
+
+        //int indent_px = 0 * depth;  // しない
+        row_box.margin_start = 8;
+        row_box.margin_end = 16;
+
+        var header = new Gtk.Label (null);
+        header.use_markup = true;
+        header.xalign = 0.0f;
+        header.wrap = true;
+        header.wrap_mode = Pango.WrapMode.WORD_CHAR;
+
+        var body = new ClickableLabel ();
+
+        // 普段と同じ見出し・本文生成
+        set_post_widgets (post, header, body);
+
+        row_box.append (header);
+        row_box.append (body);
+
+        var row = new Gtk.ListBoxRow ();
+        row.set_child (row_box);
+        return row;
     }
 
     [GtkCallback]

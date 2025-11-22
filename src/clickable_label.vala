@@ -8,7 +8,9 @@ public enum SpanType {
     URL,            // URL
     URL_IMAGE,      // 画像直リン
     URL_BOARD,      // 板URL
-    URL_THREAD      // スレURL
+    URL_THREAD,     // スレURL
+    ID,             // ID
+    ID_HEAD,        // ID(ヘッダだけ)
 }
 
 public class Span : Object {
@@ -102,6 +104,10 @@ public class ClickableLabel : Gtk.Box {
             case SpanType.URL:
                 // 緑＋下線
                 sb.append (@"<span foreground='#208020'><u>$esc</u></span>");
+                break;
+            case SpanType.ID:
+                // 赤
+                sb.append (@"<span foreground='#c03030'>$esc</span>");
                 break;
             default:
                 sb.append (esc);

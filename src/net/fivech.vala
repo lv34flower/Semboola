@@ -365,84 +365,23 @@ namespace FiveCh {
 
         // attr_name="..." / attr_name='...' を抜く簡易ヘルパ
         private static string? extract_attr (string tag, string attr_name) {
-        try {
-            MatchInfo mi;
-            var rx1 = new GLib.Regex ("\\b%s\\s*=\\s*'([^']*)'".printf (attr_name),
-                                      GLib.RegexCompileFlags.CASELESS);
-            if (rx1.match (tag, 0, out mi))
-                return mi.fetch (1);
-
-            var rx2 = new GLib.Regex ("\\b%s\\s*=\\s*'([^']*)'".printf (attr_name),
-                                      GLib.RegexCompileFlags.CASELESS);
-            if (rx2.match (tag, 0, out mi))
-                return mi.fetch (1);
-        } catch (Error e) {
-        }
-        return null;
-    }
-
-        // 確認画面の <form> の中から hidden / textarea 等の値を抜き出して HashTable にする。
-        private static HashTable<string,string>? extract_confirm_form (string html) {
             try {
                 MatchInfo mi;
-                // 最初の <form>...</form> を対象にする（本物の確認フォーム1つだけ想定）
-                var form_rx = new GLib.Regex ("<form[^>]*>(.*?)</form>",
-                                              GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
-                if (!form_rx.match (html, 0, out mi))
-                    return null;
+                var rx1 = new GLib.Regex ("\\b%s\\s*=\\s*'([^']*)'".printf (attr_name),
+                                          GLib.RegexCompileFlags.CASELESS);
+                if (rx1.match (tag, 0, out mi))
+                    return mi.fetch (1);
 
-                string form_html = mi.fetch (1);
-                var map = new HashTable<string,string> (str_hash, str_equal);
-
-                // input タグを走査
-                MatchInfo mi_input;
-                var input_rx = new GLib.Regex ("<input[^>]+>",
-                                               GLib.RegexCompileFlags.CASELESS);
-                input_rx.match (form_html, 0, out mi_input);
-                while (mi_input.matches ()) {
-                    string tag = mi_input.fetch (0);
-
-                    string? name  = extract_attr (tag, "name");
-                    if (name == null || name == "") {
-                        mi_input.next ();
-                        continue;
-                    }
-
-                    string? type  = extract_attr (tag, "type");
-                    string? value = extract_attr (tag, "value") ?? "";
-
-                    string type_l = type != null ? type.down () : "";
-
-                    // submit はラベルとして扱う。それ以外はそのままフィールドに入れる。
-                    if (type_l == "submit") {
-                        map["submit"] = value.length > 0 ? value : "書き込む";
-                    } else {
-                        map[name] = value;
-                    }
-
-                    mi_input.next ();
-                }
-
-                // textarea も拾う（MESSAGE などが入る可能性を考慮）
-                MatchInfo mi_textarea;
-                var ta_rx = new GLib.Regex ("<textarea[^>]*name\\s*=\\s*\"([^\"]*)\"[^>]*>(.*?)</textarea>",
-                                            GLib.RegexCompileFlags.DOTALL | GLib.RegexCompileFlags.CASELESS);
-                ta_rx.match (form_html, 0, out mi_textarea);
-                while (mi_textarea.matches ()) {
-                    string name = mi_textarea.fetch (1);
-                    string val  = mi_textarea.fetch (2);
-                    map[name] = decode_html_entities (val);
-                    mi_textarea.next ();
-                }
-
-                if (map.size () == 0)
-                    return null;
-
-                return map;
+                var rx2 = new GLib.Regex ("\\b%s\\s*=\\s*'([^']*)'".printf (attr_name),
+                                          GLib.RegexCompileFlags.CASELESS);
+                if (rx2.match (tag, 0, out mi))
+                    return mi.fetch (1);
             } catch (Error e) {
             }
             return null;
         }
+
+
 
         public static PostResult analyze_post_html (string html) {
             string title = "";
@@ -1051,7 +990,7 @@ namespace FiveCh {
                 // >>数字 or URL
                 _token_regex = new GLib.Regex (
                     // >>1 / >>1-3 / >>1,2,3 / >>1-3,5-7,...
-                    "(>>(?:[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*))|(https?://[^\\s<>\"']+)",
+                    "(>>(?:[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*))|(https?://(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(?::[0-9]{2,5})?(?:/[^\\s<>\"']*)?)|(ID:[A-Za-z0-9]+)",
                     GLib.RegexCompileFlags.CASELESS | GLib.RegexCompileFlags.MULTILINE
                 );
             } catch (Error e) {
@@ -1105,12 +1044,15 @@ namespace FiveCh {
                 var full = mi.fetch (0);
                 var g_reply = mi.fetch (1);
                 var g_url = mi.fetch (2);
+                var g_id = mi.fetch(3);
 
                 if (g_reply != null && g_reply.length > 0) {
                     string num = g_reply.substring (2);
                     spans.add (new Span (full, SpanType.REPLY, num));
                 } else if (g_url != null && g_url.length > 0) {
                     spans.add (new Span (full, SpanType.URL, full));
+                } else if (g_id != null && g_id.length > 0){
+                    spans.add (new Span (full, SpanType.ID, full));
                 } else {
                     spans.add (new Span (full, SpanType.NORMAL));
                 }
