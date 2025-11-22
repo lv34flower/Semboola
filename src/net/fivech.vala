@@ -68,7 +68,7 @@ namespace FiveCh {
          * Target charset for x-www-form-urlencoded percent-encoding.
          * Typical 2ch互換は CP932。UTF-8対応板なら "UTF-8" を指定。
          */
-        public string charset { get; set; default = "CP932"; }
+        public string charset { get; set; default = "CP932//IGNORE"; }
         /** Optional extra headers (e.g., Referer). */
         public HashTable<string,string>? extra_headers { get; set; }
         /** Override UA only for this request. */
