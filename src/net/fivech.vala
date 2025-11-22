@@ -864,15 +864,15 @@ namespace FiveCh {
 
             while (src.get_next_char (ref index, out ch)) {
                 // 絵文字など U+10000 以上だけエンティティにする
-                if (ch > 0xFFFF) {
+                if (ch > 0xFFFF || (ch >= 0xFE00 && ch <= 0xFE0F)) {
                     sb.append_printf ("&#%d;", (int) ch);
                 } else {
                     sb.append_unichar (ch);
                 }
             }
 
-    return sb.str;
-}
+            return sb.str;
+        }
 
 
     }
