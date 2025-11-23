@@ -64,6 +64,7 @@
                 <property name="vexpand-set">True</property>
                 <child>
                   <object class="GtkListView" id="bd_list_boards">
+                    <property name="show-separators">True</property>
                     <property name="vexpand">True</property>
                   </object>
                 </child>

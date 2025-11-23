@@ -36,6 +36,7 @@ public class ThreadRow : Gtk.Box {
         public string url { get; set; }
         public int unread { get; set; default=-1; }
         public int favorite { get; set; }
+        public int readcnt { get; set; }
         public bool read { get; set; default=false; }
 
         public string thread_id;

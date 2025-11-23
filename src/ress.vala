@@ -29,6 +29,7 @@ public class RessView : Adw.NavigationPage {
 
     private string url;
     private string name;
+    private int read; // 既読行
 
     Semboola.Window win;
 
@@ -71,13 +72,14 @@ public class RessView : Adw.NavigationPage {
     [GtkChild]
     unowned Gtk.ListBox listview;
 
-    public RessView (string url, string name) {
+    public RessView (string url, string name, int read) {
         // Object(
         //     title:name
         // );
         //
         this.url = url;
         this.name = name;
+        this.read = read;
 
         loader = new DatLoader ();
 
@@ -112,7 +114,7 @@ public class RessView : Adw.NavigationPage {
 
             switch (button) {
             case Gdk.BUTTON_PRIMARY:
-                // 左クリック（n_press でシングル / ダブルも判定可能）
+                // 左クリック
                 on_row_left_clicked (post, idx, n_press);
                 break;
             case Gdk.BUTTON_SECONDARY:
@@ -179,19 +181,9 @@ public class RessView : Adw.NavigationPage {
 
     // 左クリック
     private void on_row_left_clicked (ResRow.ResItem post, int row_index, int n_press) {
-        // 例: ダブルクリックでツリー画面を開く
         if (n_press >= 2) {
-            // ここでツリー用 index 配列を作るメソッド呼ぶ
-            Gee.ArrayList<uint> order;
-            Gee.ArrayList<int> depths;
-            Gee.HashMap<uint,uint> parent;
 
-            build_reply_tree_indices (post.index, out order, out depths, out parent);
-
-            // 別画面に渡す
-            // var tree_view = new ReplyTreeView (posts, order, depths, parent);
-            // win.push_page (tree_view);
-            win.show_error_toast ("test- 2c");
+            win.show_error_toast ("test- dc");
         } else {
             open_reply_tree_page (post.index);
         }
@@ -199,10 +191,6 @@ public class RessView : Adw.NavigationPage {
 
     // 右クリック
     private void on_row_right_clicked (ResRow.ResItem post, int row_index, double x, double y) {
-        // 例: ポップオーバーメニューを開くなど
-        // var menu = new Gtk.PopoverMenu.from_model (...);
-        // menu.set_pointing_to (...);
-        // menu.popup ();
         win.show_error_toast ("test- r");
     }
 
@@ -251,7 +239,7 @@ public class RessView : Adw.NavigationPage {
         int i = 0;
 
         Idle.add (() => {
-            int chunk = 30; // 一度に更新する行数。重ければ減らす
+            int chunk = 30;
 
             for (int n = 0; n < chunk && i < existing_count; n++, i++) {
                 var post = posts[i];
@@ -289,7 +277,7 @@ public class RessView : Adw.NavigationPage {
 
         int i = 0;
         Idle.add (() => {
-            int chunk = 20;
+            int chunk = 10;
             for (int n = 0; n < chunk && i < posts.size; n++, i++) {
                 append_row_for_post (posts[i]);
             }
@@ -302,7 +290,7 @@ public class RessView : Adw.NavigationPage {
     private void rebuild_listbox_incremental_append_only () {
         int i = res_count;
         Idle.add (() => {
-            int chunk = 20;
+            int chunk = 10;
             for (int n = 0; n < chunk && i < posts.size; n++, i++) {
                 append_row_for_post (posts[i]);
             }
@@ -384,7 +372,7 @@ public class RessView : Adw.NavigationPage {
 
         this.title=_("Loading...");
 
-        save_scroll_position ();
+        //save_scroll_position ();
 
         try {
             var cancellable = new Cancellable ();
@@ -701,27 +689,45 @@ public class RessView : Adw.NavigationPage {
 
 
     private void scroll_to_post (uint index) {
-        // ResRow.ResItem.index == 表示番号として検索
-        // for (uint i = 0; i < store.get_n_items (); i++) {
-        //     var p = (ResRow.ResItem) store.get_item (i);
-        //     if (p.index == index) {
-        //         listview.scroll_to (i, Gtk.ListScrollFlags.NONE, null);
-        //         break;
-        //     }
-        // }
-    }
+        var row = listview.get_row_at_index ((int) index-1);
+        if (row == null) {
+            return;
+        }
 
-    private void save_scroll_position () {
-        Gtk.ScrolledWindow? sw =
-            listview.get_ancestor (typeof (Gtk.ScrolledWindow)) as Gtk.ScrolledWindow;
-        if (sw == null)
+        // row の左上の座標を listbox 基準で取得
+        double rx, ry;
+        row.translate_coordinates (listview, 0, 0, out rx, out ry);
+
+        // 親チェーンから ScrolledWindow を取る
+        // ScrolledWindow -> Viewport -> ListBox という構造前提
+        var parent = listview.get_parent();
+        Gtk.ScrolledWindow? scrolled = null;
+
+        while (parent != null) {
+            scrolled = parent as Gtk.ScrolledWindow;
+            if (scrolled != null)
+                break;
+            parent = parent.get_parent();
+        }
+
+        if (scrolled == null)
             return;
 
-        var adj = sw.vadjustment;
-        if (adj == null)
-            return;
+        var vadj = scrolled.vadjustment;
 
-        saved_vadjustment = adj.value;
+        double vle = (double) ry;
+
+        // スクロール範囲にクランプ
+        if (vle < vadj.lower)
+            vle = vadj.lower;
+        if (vle > vadj.upper - vadj.page_size)
+            vle = vadj.upper - vadj.page_size;
+
+        Idle.add (() => {
+            vadj.value = vle;
+            return false; // 一回だけ
+        });
+
     }
 
     private void open_id_page (string id) {

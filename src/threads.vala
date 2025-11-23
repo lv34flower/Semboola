@@ -50,7 +50,7 @@ public class ThreadsView : Adw.NavigationPage {
         this.url = url;
         this.name = name;
 
-        var model = new Gtk.SingleSelection (store);
+        var model = new Gtk.NoSelection (store);
 
         var factory = new Gtk.SignalListItemFactory ();
 
@@ -204,6 +204,7 @@ public class ThreadsView : Adw.NavigationPage {
                 string? v;
 
                 v = extra.get ("current_res_count");
+                item.readcnt = v.to_int ();
                 item.unread = item.ress - v.to_int ();
                 if (item.unread < 0) item.unread = 0;
                 item.read = true;
@@ -231,7 +232,7 @@ public class ThreadsView : Adw.NavigationPage {
         if (nav == null) {
             return;
         }
-        nav.push(new RessView (item.url, item.title));
+        nav.push(new RessView (item.url, item.title, item.readcnt));
     }
 
     [GtkCallback]

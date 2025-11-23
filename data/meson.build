@@ -44,3 +44,8 @@ configure_file(
 )
 
 subdir('icons')
+
+install_subdir(
+  'user_data',
+  install_dir: get_option('datadir') / 'jp.lv34.Semboola'
+)

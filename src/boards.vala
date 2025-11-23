@@ -51,7 +51,7 @@ public class BoardsView : Adw.NavigationPage {
     [GtkChild]
     unowned Gtk.ToggleButton bd_toggle_edit;
 
-    // モデル（可変長）：GListStore<BoardsItem> + SingleSelection
+    // モデル（可変長）：GListStore<BoardsItem> + NoSelection
     private GLib.ListStore store = new GLib.ListStore (typeof (BoardsItem));
 
     // 編集状態管理
@@ -70,7 +70,7 @@ public class BoardsView : Adw.NavigationPage {
 
         bbslist();
 
-        var sel = new SingleSelection (store);
+        var sel = new NoSelection (store);
         bd_list_boards.model = sel;
 
         factory.setup.connect (on_setup);

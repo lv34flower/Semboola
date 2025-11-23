@@ -39,7 +39,7 @@ public class thread_hist : Adw.NavigationPage {
 
     public thread_hist () {
 
-        var model = new Gtk.SingleSelection (store);
+        var model = new Gtk.NoSelection (store);
         var factory = new Gtk.SignalListItemFactory ();
 
         // アイテムが差し替わるたびにデータを流し込む
@@ -144,6 +144,6 @@ public class thread_hist : Adw.NavigationPage {
         if (nav == null) {
             return;
         }
-        nav.push(new RessView (item.url, item.title));
+        nav.push(new RessView (item.url, item.title, item.ress));
     }
 }

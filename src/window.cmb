@@ -2,11 +2,11 @@
 <!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
 <!-- Created with Cambalache 0.96.1 -->
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
-  <ui template-class="BoardsView" filename="boards.ui" sha256="7e137d7926441bc39164567e2a663006f0be0baf8425fa8c4382c63f71426c52"/>
+  <ui template-class="BoardsView" filename="boards.ui" sha256="28e7a3d826323db5c77ea9af8f946f0751e6997baac4f51f81205419a6ae54c0"/>
   <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="46687e1d4b0fc9ebd1bcdf256261fcf6497807e96899cff8ddec603cc386f63c"/>
   <ui template-class="ThreadsView" filename="threads.ui" sha256="929493df8a36327f0ebd55479534941be13492decdfc81a9436fba83468be303"/>
-  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="2179be00e5e39e1ed51092b327bdaa5c2f4b6415f16311a0b6fd4bea1f89bf84"/>
-  <ui template-class="RessView" filename="ress.ui" sha256="bc5f8064697ccc25eb7f6a35aa64818b46d5eef59fe4d82a0cb3eceda8557ab5"/>
+  <ui template-class="ThreadRow" filename="thread_row.ui" sha256="5696d61a684cfb71f5540b8260879f70794b8576938ea4be594d4bb00473b25f"/>
+  <ui template-class="RessView" filename="ress.ui" sha256="fb56b6de3f6f588bba6821c06566a6e585ec92ce264801f4dc1fc427574b4724"/>
   <ui template-class="new_thread" filename="new_thread.ui" sha256="6722a371519660ceaae663b419d713e22af1988f7741c6c5691dc946126c5097"/>
   <ui template-class="cookie_confirm" filename="cookie_confirm.ui" sha256="9e4fa0165941f9438fc11f8aedb99621fae27647bfb06f35240df4039c553fa4"/>
   <ui template-class="new_res" filename="new_res.ui" sha256="b30ad0c4873eadf6126e3257d4273524b449d87ccd115eab27f2424928fba1fc"/>
@@ -15,5 +15,5 @@
   </ui>
   <ui template-class="thread_hist" filename="thread_hist.ui" sha256="b6e9fd3d1a1d9729eeb2ab91f68511f17bd7b6ebd25b5185b8bfebe48d2f1008"/>
   <ui template-class="replies" filename="replies.ui" sha256="4c157e045fadcc351706038b07901427b5ee0d9d0b4ceb8dc4727ad3ac7023e1"/>
-  <ui filename="overlay.ui" sha256="8bff4645642681cab160f23a20b63641b2ec329f48acabb122057ade7d0f7029"/>
+  <ui filename="overlay.ui" sha256="7248981979dd01ccb1e4a4b90832f1e97e02f164a726662ff3363e39ce4d735f"/>
 </cambalache-project>

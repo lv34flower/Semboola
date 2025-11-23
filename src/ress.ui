@@ -37,6 +37,7 @@
             <property name="vexpand">True</property>
             <child>
               <object class="GtkListBox" id="listview">
+                <property name="selection-mode">none</property>
                 <property name="show-separators">True</property>
                 <property name="vexpand">True</property>
               </object>
