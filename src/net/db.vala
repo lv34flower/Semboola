@@ -13,18 +13,18 @@ namespace Db {
             db = getInstance ();
         }
 
-        // 影響行数がほしい UPDATE/INSERT/DELETE 用
-        // public int exec (string sql, string[] params = {}) throws Error {
-        //     Sqlite.Statement st;
-        //     int rc = db.prepare_v2 (sql, -1, out st, null);
-        //     if (rc != Sqlite.OK) throw new Error.FAILED ("prepare: %s", Sqlite.errstr (rc));
-        //     bind_all (st, params);
-        //     rc = st.step ();
-        //     int changes = (rc == Sqlite.DONE) ? db.changes () : 0;
-        //     st.finalize ();
-        //     if (rc != Sqlite.DONE) throw new Error.FAILED ("step: %s", Sqlite.errstr (rc));
-        //     return changes;
-        // }
+        // UPDATE/INSERT/DELETE 用
+        public int exec (string sql, string[] params = {}) throws Error {
+            Sqlite.Statement st;
+            int rc = db.prepare_v2 (sql, -1, out st, null);
+            if (rc != Sqlite.OK) throw new IOError.FAILED ("prepare: %s", db.errmsg ());
+            bind_all (st, params);
+            rc = st.step ();
+            int changes = (rc == Sqlite.DONE) ? db.changes () : 0;
+            //st.finalize ();
+            if (rc != Sqlite.DONE) throw new IOError.FAILED ("step: %s", db.errmsg ());
+            return changes;
+        }
 
         // 1行取得（なければ null）
         // public HashMap<string,string>? query_one (string sql, string[] params = {}) throws Error {

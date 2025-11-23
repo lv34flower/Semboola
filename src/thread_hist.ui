@@ -14,6 +14,7 @@
             <child>
               <object class="GtkToggleButton" id="toggle_edit">
                 <property name="margin-start">6</property>
+                <property name="visible">False</property>
                 <child>
                   <object class="GtkImage">
                     <property name="icon-name">user-trash-symbolic</property>

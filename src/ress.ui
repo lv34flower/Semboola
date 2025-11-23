@@ -47,7 +47,29 @@
         <child>
           <object class="GtkActionBar">
             <child>
-              <object class="GtkButton" id="threads_btn_reload">
+              <object class="GtkButton">
+                <property name="halign">end</property>
+                <signal name="clicked" handler="on_down_click"/>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">go-down-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton">
+                <property name="halign">end</property>
+                <signal name="clicked" handler="on_up_click"/>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">go-up-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton">
                 <property name="halign">end</property>
                 <property name="hexpand">True</property>
                 <signal name="clicked" handler="on_reload_click"/>

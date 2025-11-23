@@ -82,6 +82,10 @@ public class BoardsView : Adw.NavigationPage {
         });
 
         bd_list_boards.factory = factory;
+
+        this.shown.connect (() => {
+            clean_data.begin ();
+        });
     }
 
     construct {
@@ -156,29 +160,21 @@ public class BoardsView : Adw.NavigationPage {
         del.clicked.connect (() => {
             uint pos = li.position;
             if (pos >= 0 && pos < (int) store.get_n_items ()) {
-                //store.remove (pos);
-                Db.DB db = new Db.DB();
-                Sqlite.Statement st;
-                string sql = """
-                    DELETE from bbslist where
-                    url = ?1
-                """;
-                int rc = db.db.prepare_v2 (sql, -1, out st, null);
+                try {
+                    Db.DB db = new Db.DB();
+                    Sqlite.Statement st;
+                    string sql = """
+                        DELETE from bbslist where
+                        url = ?1
+                    """;
 
-                if (rc != Sqlite.OK) {
-	                stderr.printf ("Error: %d: %s\n", db.db.errcode (), db.db.errmsg ());
-	                return;
-                }
+                    var bi = (BoardsItem) li.item;
+                    var deleteurl = bi.url;
 
-                var bi = (BoardsItem) li.item;
-                var deleteurl = bi.url;
-                st.bind_text (1, deleteurl);
-
-                rc = st.step ();
-                st.reset ();
-                if (rc != Sqlite.DONE) {
-                    stderr.printf ("Error: %d: %s\n", db.db.errcode (), db.db.errmsg ());
-                    return;
+                    db.exec (sql, {deleteurl});
+                } catch (Error e) {
+                    show_error_toast (e.message);
+                    print(e.message);
                 }
 
                 bbslist();
@@ -239,28 +235,12 @@ public class BoardsView : Adw.NavigationPage {
         // DB更新
         try {
             Db.DB db = new Db.DB();
-            Sqlite.Statement st;
             string sql = """
                 INSERT INTO bbslist (url, name)
                 VALUES (?1, ?2)
             """;
-            int rc = db.db.prepare_v2 (sql, -1, out st, null);
 
-            if (rc != Sqlite.OK) {
-	            stderr.printf ("Error: %d: %s\n", db.db.errcode (), db.db.errmsg ());
-	            return;
-            }
-
-            st.bind_text (1, url);
-            st.bind_text (2, name);
-
-            rc = st.step ();
-            st.reset ();
-            if (rc != Sqlite.DONE) {
-                stderr.printf ("Error: %d: %s\n", db.db.errcode (), db.db.errmsg ());
-                show_error_toast ("Duplicate URL");
-                return;
-            }
+            db.exec (sql, {url, name});
 
         } catch {
             show_error_toast ("Duplicate URL");
@@ -316,12 +296,43 @@ public class BoardsView : Adw.NavigationPage {
     public void show_error_toast (string message) {
         var toast = this.get_ancestor (typeof (Adw.ToastOverlay)) as Adw.ToastOverlay;
         if (toast == null) {
-            //print("type:%s\n", this.parent(). );
             return;
         }
         var t = new Adw.Toast (message);
         t.set_timeout (5); // 秒
 
         toast.add_toast (t);
+    }
+
+    // DBの掃除
+    public async void clean_data () {
+        try {
+            Db.DB db = new Db.DB();
+
+            var sql = """
+                WITH to_keep AS (
+                  SELECT rowid
+                  FROM tempwrite
+                  ORDER BY last_touch_date DESC
+                  LIMIT 1000
+                )
+                DELETE FROM tempwrite
+                WHERE rowid NOT IN (SELECT rowid FROM to_keep)
+            """;
+            db.exec (sql, {});
+
+            sql = """
+                WITH to_keep AS (
+                  SELECT rowid
+                  FROM threadlist
+                  ORDER BY last_touch_date DESC
+                  LIMIT 1000
+                )
+                DELETE FROM threadlist
+                WHERE rowid NOT IN (SELECT rowid FROM to_keep)
+            """;
+            db.exec (sql, {});
+
+        } catch {}
     }
 }

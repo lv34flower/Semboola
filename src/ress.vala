@@ -30,12 +30,13 @@ public class RessView : Adw.NavigationPage {
     private string url;
     private string name;
     private int read; // 既読行
+    private bool is_read = false;
 
     Semboola.Window win;
 
     private DatLoader loader;
 
-    private GLib.ListStore store = new GLib.ListStore (typeof (ResRow.ResItem));
+    //private GLib.ListStore store = new GLib.ListStore (typeof (ResRow.ResItem));
     private Gee.ArrayList<ResRow.ResItem> posts;
 
     // from: レス i が、どのレスにアンカーしているか   (i -> targets)
@@ -65,9 +66,6 @@ public class RessView : Adw.NavigationPage {
 
     // ここまでロード
     private int res_count = 0;
-
-    // スクロールいち
-    private double saved_vadjustment = 0.0;
 
     [GtkChild]
     unowned Gtk.ListBox listview;
@@ -173,7 +171,6 @@ public class RessView : Adw.NavigationPage {
 
     // ヘッダをクリック
     private void on_header_clicked (ResRow.ResItem post, int row_index, int n_press) {
-        print (post.id);
         if (post.id == null || post.id == "")
             return;
         open_id_page(post.id);
@@ -935,6 +932,20 @@ public class RessView : Adw.NavigationPage {
         return row;
     }
 
+
+    private async void go_up () {
+        scroll_to_post (1);
+    }
+    private async void go_down () {
+        if (is_read || read == 0 ) {
+            scroll_to_post (posts.size);
+        } else {
+            scroll_to_post (read);
+            print(read.to_string ());
+            is_read = true;
+        }
+    }
+
     [GtkCallback]
     private void on_add_click () {
         var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
@@ -949,5 +960,15 @@ public class RessView : Adw.NavigationPage {
     [GtkCallback]
     private void on_reload_click () {
         reload.begin ();
+    }
+
+    [GtkCallback]
+    private void on_up_click () {
+        go_up.begin ();
+    }
+
+    [GtkCallback]
+    private void on_down_click () {
+        go_down.begin ();
     }
 }

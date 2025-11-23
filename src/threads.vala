@@ -214,7 +214,8 @@ public class ThreadsView : Adw.NavigationPage {
             }
 
         } catch (Error e) {
-            win.show_error_toast (_("Invalid error."));
+            print (e.message);
+            win.show_error_toast (e.message);
         }
     }
 

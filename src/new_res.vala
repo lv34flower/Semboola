@@ -48,6 +48,31 @@ public class new_res : Adw.ApplicationWindow {
         this.set_modal (true);
 
         win = parent as Semboola.Window;
+
+        // 既に入力中の内容が存在したら使用する
+        try {
+            Db.DB db = new Db.DB();
+
+            string sql = """
+                SELECT *
+                  FROM tempwrite
+                 WHERE board_url = ?1
+                   AND bbs_id = ?2
+                   AND thread_id = ?3
+            """;
+
+            var rows = db.query (sql, {board.site_base_url, board.board_key, FiveCh.DatLoader.guess_threadkey_from_url (url)});
+
+            foreach (var r in rows) {
+                name.set_text (r["name"]);
+                mail.set_text (r["mail"]);
+                textbuffer.set_text (r["text"]);
+                break;
+            }
+        } catch (Error e) {
+            win.show_error_toast (e.message);
+            print(e.message);
+        }
     }
 
     construct {
@@ -56,6 +81,27 @@ public class new_res : Adw.ApplicationWindow {
 
     [GtkCallback]
     public void on_cancel_click () {
+        // 入力中の内容を保管
+        try {
+            Db.DB db = new Db.DB();
+
+            string sql = """
+                INSERT INTO tempwrite (board_url, bbs_id, thread_id, title, name, mail, text, last_touch_date)
+                VALUES (?1, ?2, ?3, '', ?4, ?5, ?6, ?7)
+                ON CONFLICT(board_url, bbs_id, thread_id) DO UPDATE SET
+                title = excluded.title,
+                name = excluded.name,
+                mail = excluded.mail,
+                text = excluded.text,
+                last_touch_date = excluded.last_touch_date
+            """;
+
+            db.exec (sql, {board.site_base_url, board.board_key, FiveCh.DatLoader.guess_threadkey_from_url (url), name.text, mail.text, textbuffer.text, new DateTime.now_utc ().to_unix ().to_string () });
+        } catch (Error e) {
+            win.show_error_toast (e.message);
+            print(e.message);
+        }
+
         this.close ();
     }
 
@@ -96,6 +142,21 @@ public class new_res : Adw.ApplicationWindow {
             switch (res.kind) {
             case FiveCh.Client.PostPageKind.OK:
                 // 普通に成功
+                try {
+                    // 入力中情報の削除
+                    Db.DB db = new Db.DB();
+                    string sql = """
+                        DELETE from tempwrite
+                        where board_url = ?1
+                          and bbs_id = ?2
+                          and thread_id = ?3
+                    """;
+
+                    db.exec (sql, {board.site_base_url, board.board_key, FiveCh.DatLoader.guess_threadkey_from_url (url)});
+                } catch (Error e) {
+                    win.show_error_toast (e.message);
+                    print(e.message);
+                }
                 submitted ();
                 this.close ();
                 break;
