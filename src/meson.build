@@ -18,6 +18,9 @@ Semboola_sources = [
   'net/db.vala',
 ]
 
+cc = meson.get_compiler('c')
+libm = cc.find_library('m', required: true)
+
 Semboola_deps = [
   config_dep,
   dependency('gtk4'),
@@ -29,7 +32,9 @@ Semboola_deps = [
   dependency('gee-0.8'),
   dependency('sqlite3'),
   dependency('webkitgtk-6.0'),
+  dependency('gdk-pixbuf-2.0'),
   meson.get_compiler('vala').find_library('posix'),
+  libm,
 ]
 
 Semboola_sources += gnome.compile_resources('Semboola-resources',

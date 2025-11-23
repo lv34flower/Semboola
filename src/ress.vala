@@ -23,9 +23,13 @@ using GLib;
 using Gdk;
 using Adw;
 using FiveCh;
+using Soup;
+//using Gdk.Pixbuf;
 
 [GtkTemplate (ui = "/jp/lv34/Semboola/ress.ui")]
 public class RessView : Adw.NavigationPage {
+    private const int THUMB_WIDTH = 80;
+    private const int THUMB_HEIGHT = 80;
 
     private string url;
     private string name;
@@ -342,12 +346,43 @@ public class RessView : Adw.NavigationPage {
         body.span_left_clicked.connect ((span) => {
             on_span_left_clicked (post, span);
         });
+
         body.span_right_clicked.connect ((span, x, y) => {
             on_span_right_clicked (post, span, x, y, body);
         });
 
         row_box.append (header);
         row_box.append (body);
+
+        // 画像サムネイル''
+        var image_urls = find_image_urls_for_post (post);
+        if (image_urls.size > 0) {
+            var thumbs_box = new Gtk.FlowBox ();
+            thumbs_box.orientation = Gtk.Orientation.HORIZONTAL;
+            thumbs_box.selection_mode = Gtk.SelectionMode.NONE;
+            thumbs_box.row_spacing = 4;
+            thumbs_box.column_spacing = 4;
+            thumbs_box.valign = Gtk.Align.START;
+            thumbs_box.halign = Gtk.Align.START;
+            thumbs_box.max_children_per_line = 3; // 1行あたりのサムネ数上限
+
+            foreach (var url in image_urls) {
+                var thumb = new Gtk.Picture ();
+                thumb.content_fit = Gtk.ContentFit.CONTAIN;
+                thumb.width_request = THUMB_WIDTH;
+                thumb.height_request = THUMB_HEIGHT;
+                thumb.can_shrink = false;
+
+                // FlowBoxChild に包んで追加
+                var child = new Gtk.FlowBoxChild ();
+                child.set_child (thumb);
+                thumbs_box.insert (child, -1);
+
+                load_image_thumbnail_async.begin (url, thumb);
+            }
+
+            row_box.append (thumbs_box);
+        }
 
         var row = new Gtk.ListBoxRow ();
         row.set_child (row_box);
@@ -453,6 +488,224 @@ public class RessView : Adw.NavigationPage {
 
     // 長押しと左クリックが競合するのを防ぐ
     private bool suppress_after_long = false;
+
+    // --画像サムネイル系
+    // 画像 URL かどうか判定（拡張子ベース）
+    private static bool is_image_url (string url) {
+        if (url == null)
+            return false;
+
+        // クエリ・フラグメントは切り捨ててから判定
+        string lower = url.down ();
+        int q = lower.index_of_char ('?');
+        if (q >= 0)
+            lower = lower.substring (0, q);
+        int hash = lower.index_of_char ('#');
+        if (hash >= 0)
+            lower = lower.substring (0, hash);
+
+        return lower.has_suffix (".jpg")
+            || lower.has_suffix (".jpeg")
+            || lower.has_suffix (".png")
+            || lower.has_suffix (".gif");
+    }
+
+    // レス内に含まれる「画像URL」を全部返す
+    private Gee.ArrayList<string> find_image_urls_for_post (ResRow.ResItem post) {
+        var result = new Gee.ArrayList<string> ();
+
+        var spans = post.get_spans ();
+        if (spans == null)
+            return result;
+
+        foreach (var span in spans) {
+            if (span.type == SpanType.URL && span.payload != null) {
+                var url = span.payload;
+                if (is_image_url (url)) {
+                    result.add (url);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // 画像キャッシュ用のパスを作る
+    private string get_image_cache_path (string url) {
+        // ~/.cache/Semboola/thumbs
+        var cache_root = Environment.get_user_cache_dir ();
+        var dir = Path.build_filename (cache_root, "Semboola", "thumbs");
+
+        try {
+            DirUtils.create_with_parents (dir, 0755);
+        } catch (Error e) {
+            // 作れなかったら諦めてキャッシュ無しで続行
+        }
+
+        // 拡張子を元URLから取り出す（? # 以降は除外）
+        string lower = url.down ();
+        int q = lower.index_of_char ('?');
+        if (q >= 0)
+            lower = lower.substring (0, q);
+        int hash = lower.index_of_char ('#');
+        if (hash >= 0)
+            lower = lower.substring (0, hash);
+
+        string ext = ".img";
+        int dot = lower.last_index_of (".");
+        if (dot >= 0 && dot + 1 < lower.length) {
+            ext = lower.substring (dot);
+            if (!(ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif")) {
+                ext = ".img";
+            }
+        }
+
+        // URL を SHA256 でハッシュしてファイル名にする
+        var checksum = new Checksum (ChecksumType.SHA256);
+        checksum.update (url.data, (size_t) url.length);
+        var hex = checksum.get_string ();
+
+        return Path.build_filename (dir, hex + ext);
+    }
+
+    // 画像拡大表示用の簡易ビューア
+    private void show_image_dialog_from_cache (string cache_path, string url) {
+        try {
+            // 1. キャッシュから元画像を読み込み
+            if (!FileUtils.test (cache_path, FileTest.EXISTS)) {
+                // キャッシュが無い場合、必要ならここで再ダウンロードしてもいい
+                // ひとまず無いなら諦める実装でもOK
+                return;
+            }
+
+            var pixbuf = new Gdk.Pixbuf.from_file (cache_path);
+
+            // 必要ならここで「巨大すぎるときだけ縮小」みたいな制限もできる
+            // 例: 画面解像度の2倍くらいに抑える、など
+
+            var texture = Gdk.Texture.for_pixbuf (pixbuf);
+
+            var viewer = new Gtk.Window ();
+            viewer.set_default_size (800, 600);
+
+            var root = this.get_root () as Gtk.Window;
+            if (root != null) {
+                viewer.set_transient_for (root);
+                viewer.set_modal (true);
+            }
+
+            var scrolled = new Gtk.ScrolledWindow ();
+            var picture = new Gtk.Picture.for_paintable (texture);
+            picture.content_fit = Gtk.ContentFit.CONTAIN;
+            picture.can_shrink = false;
+
+            scrolled.set_child (picture);
+            viewer.set_child (scrolled);
+
+            viewer.present ();
+
+        } catch (Error e) {
+            // 読み込み失敗時は何もしない
+        }
+    }
+
+
+    // サムネ画像を非同期でロード（キャッシュ付き）して thumb Picture にセット
+    private async void load_image_thumbnail_async (string url, Gtk.Picture thumb) {
+        try {
+            var cache_path = get_image_cache_path (url);
+            Gdk.Pixbuf? pixbuf_for_thumb = null;
+
+            // 1. キャッシュからサムネ用 Pixbuf を作る
+            if (FileUtils.test (cache_path, FileTest.EXISTS)) {
+                try {
+                    var original = new Gdk.Pixbuf.from_file (cache_path);
+                    pixbuf_for_thumb = scale_pixbuf_for_thumb (original);
+                } catch (Error e) {
+                    pixbuf_for_thumb = null;
+                }
+            }
+
+            // 2. キャッシュが無い場合はダウンロードして保存 → 縮小
+            if (pixbuf_for_thumb == null) {
+                var client = new FiveCh.Client ();
+                var msg = new Soup.Message ("GET", url);
+
+                var bytes = yield client.session.send_and_read_async (msg, Priority.DEFAULT, null);
+                if (msg.get_status () != Soup.Status.OK)
+                    return;
+
+                unowned uint8[] data = bytes.get_data ();
+
+                // キャッシュ保存
+                try {
+                    FileUtils.set_data (cache_path, data);
+                } catch (Error e) {
+                }
+
+                // PixbufLoaderで画像として解釈
+                var loader = new Gdk.PixbufLoader ();
+                loader.write (data);
+                loader.close ();
+
+                var original = loader.get_pixbuf ();
+                if (original == null)
+                    return;
+
+                pixbuf_for_thumb = scale_pixbuf_for_thumb (original);
+            }
+
+            if (pixbuf_for_thumb == null)
+                return;
+
+            // サムネ用テクスチャ作成
+            var texture_thumb = Gdk.Texture.for_pixbuf (pixbuf_for_thumb);
+            thumb.set_paintable (texture_thumb);
+
+            // クリック時に「キャッシュパス」を渡して拡大表示
+            var click = new Gtk.GestureClick ();
+            click.set_button (0);
+            thumb.add_controller (click);
+
+            // クロージャでパスをキャプチャしておく
+            string cp = cache_path;
+            string u = url;
+
+            click.released.connect ((n_press, x, y) => {
+                if (n_press >= 1) {
+                    show_image_dialog_from_cache (cp, u);
+                }
+            });
+
+        } catch (Error e) {
+            // 失敗時は何も表示しない
+        }
+    }
+
+
+
+    // Pixbuf をサムネ用に縮小して返す
+    private Gdk.Pixbuf scale_pixbuf_for_thumb (Gdk.Pixbuf src) {
+        int w = src.get_width ();
+        int h = src.get_height ();
+
+        if (w <= 0 || h <= 0)
+            return src;
+
+        // 目標サイズに収まるようにスケール
+        double scale_w = (double) THUMB_WIDTH / (double) w;
+        double scale_h = (double) THUMB_HEIGHT / (double) h;
+        double scale = Math.fmin (1.0, Math.fmin (scale_w, scale_h)); // 拡大はしない
+
+        int new_w = (int) Math.round (w * scale);
+        int new_h = (int) Math.round (h * scale);
+
+        if (new_w <= 0 || new_h <= 0)
+            return src;
+
+        return src.scale_simple (new_w, new_h, Gdk.InterpType.BILINEAR);
+    }
+
 
     // -------- Spanクリック時の動作 --------
 
