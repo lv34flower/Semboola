@@ -10,10 +10,10 @@
   <ui template-class="new_thread" filename="new_thread.ui" sha256="6722a371519660ceaae663b419d713e22af1988f7741c6c5691dc946126c5097"/>
   <ui template-class="cookie_confirm" filename="cookie_confirm.ui" sha256="9e4fa0165941f9438fc11f8aedb99621fae27647bfb06f35240df4039c553fa4"/>
   <ui template-class="new_res" filename="new_res.ui" sha256="b30ad0c4873eadf6126e3257d4273524b449d87ccd115eab27f2424928fba1fc"/>
+  <ui template-class="thread_hist" filename="thread_hist.ui" sha256="aa1a9c62718e0fabec41cbd115125b44ba055c74ead1da4dfc8ed13d712ce4bd"/>
+  <ui template-class="replies" filename="replies.ui" sha256="b02f6a3bcd73ce2b368c591c6373c7f27b90896bca215075962d4281d4fa45a7"/>
+  <ui template-class="imageview" filename="imageview.ui" sha256="b4abbe26553a0d759e7e12a8b5eed45e25d8efbcc3096890a1d42d05daf88442"/>
   <ui template-class="SemboolaWindow" filename="window.ui" sha256="40cccb50e3b6a26c4329d6c9735f5e9415e9afef4a4c723e9bc32b8fdc8f03bf">
     <requires>BoardsView</requires>
   </ui>
-  <ui template-class="thread_hist" filename="thread_hist.ui" sha256="0ad3a64731ce2e6adaf9c2e615d978149108aeb26d145b366a1e6e7c488355a3"/>
-  <ui template-class="replies" filename="replies.ui" sha256="4c157e045fadcc351706038b07901427b5ee0d9d0b4ceb8dc4727ad3ac7023e1"/>
-  <ui filename="overlay.ui" sha256="7248981979dd01ccb1e4a4b90832f1e97e02f164a726662ff3363e39ce4d735f"/>
 </cambalache-project>

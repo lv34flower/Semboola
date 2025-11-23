@@ -1,24 +1,25 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Created with Cambalache 0.96.1 -->
 <interface>
-  <!-- interface-name thread_hist.ui -->
+  <!-- interface-name imageview.ui -->
   <requires lib="gtk" version="4.18"/>
   <requires lib="libadwaita" version="1.4"/>
-  <template class="thread_hist" parent="AdwNavigationPage">
-    <property name="title" translatable="yes">History</property>
+  <template class="imageview" parent="AdwNavigationPage">
     <child>
       <object class="GtkBox">
         <property name="orientation">vertical</property>
         <child>
           <object class="AdwHeaderBar" id="header">
             <property name="show-start-title-buttons">False</property>
-            <child>
-              <object class="GtkToggleButton" id="toggle_edit">
-                <property name="margin-start">6</property>
-                <property name="visible">False</property>
+            <child type="end">
+              <object class="GtkButton">
+                <property name="halign">end</property>
+                <property name="has-frame">False</property>
+                <property name="hexpand">True</property>
+                <signal name="clicked" handler="on_download_click"/>
                 <child>
                   <object class="GtkImage">
-                    <property name="icon-name">user-trash-symbolic</property>
+                    <property name="icon-name">folder-download-symbolic</property>
                   </object>
                 </child>
               </object>
@@ -26,12 +27,13 @@
           </object>
         </child>
         <child>
-          <object class="GtkScrolledWindow">
+          <object class="GtkScrolledWindow" id="scrolled">
             <property name="vexpand">True</property>
             <child>
-              <object class="GtkListView" id="listview">
-                <property name="show-separators">True</property>
-                <property name="vexpand">True</property>
+              <object class="GtkViewport" id="viewport">
+                <child>
+                  <object class="GtkPicture" id="picture"/>
+                </child>
               </object>
             </child>
           </object>

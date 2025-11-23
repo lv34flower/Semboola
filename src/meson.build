@@ -11,6 +11,7 @@ Semboola_sources = [
   'ress.vala',
   'replies.vala',
   'res_row.vala',
+  'imageview.vala',
   'new_res.vala',
   'clickable_label.vala',
   'cookie_confirm.vala',

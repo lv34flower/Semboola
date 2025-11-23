@@ -30,6 +30,8 @@ using Soup;
 public class RessView : Adw.NavigationPage {
     private const int THUMB_WIDTH = 80;
     private const int THUMB_HEIGHT = 80;
+    // 画像ダウンロードの並列上限
+    private const int MAX_PARALLEL_IMAGE_DOWNLOADS = 4;
 
     private string url;
     private string name;
@@ -48,6 +50,20 @@ public class RessView : Adw.NavigationPage {
 
     // to:   レス i が、どのレスからアンカーされているか (sources -> i)
     private Gee.ArrayList<Gee.ArrayList<uint>> replied_from;
+
+    // 待ち行列
+    private Gee.Queue<ImageDownloadTask> image_download_queue = new Gee.LinkedList<ImageDownloadTask> ();
+
+    // 画像ダウンロードタスク
+    private class ImageDownloadTask : Object {
+        public string url;
+        public weak Gtk.Picture thumb;
+
+        public ImageDownloadTask (string url, Gtk.Picture thumb) {
+            this.url = url;
+            this.thumb = thumb;
+        }
+    }
 
     // ID このIDが何レスしているか
     private class IdStats : Object {
@@ -70,6 +86,9 @@ public class RessView : Adw.NavigationPage {
 
     // ここまでロード
     private int res_count = 0;
+
+    // 現在動いているダウンロード数
+    private int running_image_downloads = 0;
 
     [GtkChild]
     unowned Gtk.ListBox listview;
@@ -303,90 +322,8 @@ public class RessView : Adw.NavigationPage {
         });
     }
 
-    // 共通の row 生成ヘルパ
     private void append_row_for_post (ResRow.ResItem post) {
-
-        var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
-        row_box.margin_top = 6;
-        row_box.margin_bottom = 6;
-        row_box.margin_start = 8;
-        row_box.margin_end = 16;
-
-        var header = new Gtk.Label (null);
-        header.use_markup = true;
-        header.xalign = 0.0f;
-        header.wrap = true;
-        header.wrap_mode = Pango.WrapMode.WORD_CHAR;
-
-        var body = new ClickableLabel ();
-
-        set_post_widgets (post, header, body);
-
-        var header_click = new Gtk.GestureClick ();
-        header_click.set_button (1);
-
-        header_click.released.connect ((n_press, x, y) => {
-            consume_row_click_once ();
-
-            var row = header.get_ancestor (typeof (Gtk.ListBoxRow)) as Gtk.ListBoxRow;
-            if (row == null)
-                return;
-
-            int idx = row.get_index ();
-            if (idx < 0 || idx >= posts.size)
-                return;
-
-            var p = posts[idx];
-
-            on_header_clicked (p, idx, n_press);
-        });
-
-        header.add_controller (header_click);
-
-        body.span_left_clicked.connect ((span) => {
-            on_span_left_clicked (post, span);
-        });
-
-        body.span_right_clicked.connect ((span, x, y) => {
-            on_span_right_clicked (post, span, x, y, body);
-        });
-
-        row_box.append (header);
-        row_box.append (body);
-
-        // 画像サムネイル''
-        var image_urls = find_image_urls_for_post (post);
-        if (image_urls.size > 0) {
-            var thumbs_box = new Gtk.FlowBox ();
-            thumbs_box.orientation = Gtk.Orientation.HORIZONTAL;
-            thumbs_box.selection_mode = Gtk.SelectionMode.NONE;
-            thumbs_box.row_spacing = 4;
-            thumbs_box.column_spacing = 4;
-            thumbs_box.valign = Gtk.Align.START;
-            thumbs_box.halign = Gtk.Align.START;
-            thumbs_box.max_children_per_line = 3; // 1行あたりのサムネ数上限
-
-            foreach (var url in image_urls) {
-                var thumb = new Gtk.Picture ();
-                thumb.content_fit = Gtk.ContentFit.CONTAIN;
-                thumb.width_request = THUMB_WIDTH;
-                thumb.height_request = THUMB_HEIGHT;
-                thumb.can_shrink = false;
-
-                // FlowBoxChild に包んで追加
-                var child = new Gtk.FlowBoxChild ();
-                child.set_child (thumb);
-                thumbs_box.insert (child, -1);
-
-                load_image_thumbnail_async.begin (url, thumb);
-            }
-
-            row_box.append (thumbs_box);
-        }
-
-        var row = new Gtk.ListBoxRow ();
-        row.set_child (row_box);
-
+        var row = build_row_for_post (post);
         listview.append (row);
     }
 
@@ -569,44 +506,13 @@ public class RessView : Adw.NavigationPage {
     }
 
     // 画像拡大表示用の簡易ビューア
-    private void show_image_dialog_from_cache (string cache_path, string url) {
-        try {
-            // 1. キャッシュから元画像を読み込み
-            if (!FileUtils.test (cache_path, FileTest.EXISTS)) {
-                // キャッシュが無い場合、必要ならここで再ダウンロードしてもいい
-                // ひとまず無いなら諦める実装でもOK
-                return;
-            }
-
-            var pixbuf = new Gdk.Pixbuf.from_file (cache_path);
-
-            // 必要ならここで「巨大すぎるときだけ縮小」みたいな制限もできる
-            // 例: 画面解像度の2倍くらいに抑える、など
-
-            var texture = Gdk.Texture.for_pixbuf (pixbuf);
-
-            var viewer = new Gtk.Window ();
-            viewer.set_default_size (800, 600);
-
-            var root = this.get_root () as Gtk.Window;
-            if (root != null) {
-                viewer.set_transient_for (root);
-                viewer.set_modal (true);
-            }
-
-            var scrolled = new Gtk.ScrolledWindow ();
-            var picture = new Gtk.Picture.for_paintable (texture);
-            picture.content_fit = Gtk.ContentFit.CONTAIN;
-            picture.can_shrink = false;
-
-            scrolled.set_child (picture);
-            viewer.set_child (scrolled);
-
-            viewer.present ();
-
-        } catch (Error e) {
-            // 読み込み失敗時は何もしない
+    private void show_image (string cache_path, string url) {
+        // 次の画面へ遷移
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
+            return;
         }
+        nav.push(new imageview (url, cache_path));
     }
 
 
@@ -673,7 +579,7 @@ public class RessView : Adw.NavigationPage {
 
             click.released.connect ((n_press, x, y) => {
                 if (n_press >= 1) {
-                    show_image_dialog_from_cache (cp, u);
+                    show_image (cp, u);
                 }
             });
 
@@ -706,7 +612,41 @@ public class RessView : Adw.NavigationPage {
         return src.scale_simple (new_w, new_h, Gdk.InterpType.BILINEAR);
     }
 
+    // ダウンロードタスクをキューに積む
+    private void enqueue_image_download (string url, Gtk.Picture thumb) {
+        image_download_queue.offer (new ImageDownloadTask (url, thumb));
+        process_image_download_queue ();
+    }
 
+    // キューを処理して、同時実行数の上限まで流す
+    private void process_image_download_queue () {
+        // すでに上限まで動いていたら何もしない
+        while (running_image_downloads < MAX_PARALLEL_IMAGE_DOWNLOADS &&
+               !image_download_queue.is_empty) {
+
+            var task = image_download_queue.poll ();
+            if (task == null)
+                break;
+
+            if (task.thumb == null)
+                continue;
+
+            running_image_downloads++;
+
+            // async 関数を begin して、終わったらカウンタを戻す
+            load_image_thumbnail_async.begin (task.url, task.thumb, (obj, res) => {
+                try {
+                    load_image_thumbnail_async.end (res);
+                } catch (Error e) {
+                    // 画像ロード失敗は
+                }
+
+                running_image_downloads--;
+                // 次のタスクを回す
+                process_image_download_queue ();
+            });
+        }
+    }
     // -------- Spanクリック時の動作 --------
 
     private void on_span_left_clicked (ResRow.ResItem post, Span span) {
@@ -991,7 +931,7 @@ public class RessView : Adw.NavigationPage {
         var idxs = id_to_indices[id];
         foreach (var idx in idxs) {
             var p = posts[(int) idx-1];
-            var row = create_reply_row (p);
+            var row = build_row_for_post (p);
             id_list.append (row);
         }
         return id_list;
@@ -1035,7 +975,7 @@ public class RessView : Adw.NavigationPage {
             // posts は 0-based, index は 1-based
             var post = posts[(int) idx - 1];
 
-            var row = create_reply_row (post);
+            var row = build_row_for_post (post);
 
             tree_list.append (row);
         }
@@ -1144,12 +1084,10 @@ public class RessView : Adw.NavigationPage {
         }
     }
 
-    private Gtk.ListBoxRow create_reply_row (ResRow.ResItem post) {
+    private Gtk.ListBoxRow build_row_for_post (ResRow.ResItem post, int depth = 0) {
         var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
         row_box.margin_top = 6;
         row_box.margin_bottom = 6;
-
-        //int indent_px = 0 * depth;  // しない
         row_box.margin_start = 8;
         row_box.margin_end = 16;
 
@@ -1161,16 +1099,103 @@ public class RessView : Adw.NavigationPage {
 
         var body = new ClickableLabel ();
 
-        // 普段と同じ見出し・本文生成
         set_post_widgets (post, header, body);
+
+        var header_click = new Gtk.GestureClick ();
+        header_click.set_button (1);
+
+        header_click.released.connect ((n_press, x, y) => {
+            consume_row_click_once ();
+
+            var row = header.get_ancestor (typeof (Gtk.ListBoxRow)) as Gtk.ListBoxRow;
+            if (row == null)
+                return;
+
+            int idx = row.get_index ();
+            if (idx < 0 || idx >= posts.size)
+                return;
+
+            var p = posts[idx];
+
+            on_header_clicked (p, idx, n_press);
+        });
+
+        header.add_controller (header_click);
+
+        body.span_left_clicked.connect ((span) => {
+            on_span_left_clicked (post, span);
+        });
+
+        body.span_right_clicked.connect ((span, x, y) => {
+            on_span_right_clicked (post, span, x, y, body);
+        });
 
         row_box.append (header);
         row_box.append (body);
 
+        // 画像サムネイル''
+        var image_urls = find_image_urls_for_post (post);
+        if (image_urls.size > 0) {
+            var thumbs_box = new Gtk.FlowBox ();
+            thumbs_box.orientation = Gtk.Orientation.HORIZONTAL;
+            thumbs_box.selection_mode = Gtk.SelectionMode.NONE;
+            thumbs_box.row_spacing = 4;
+            thumbs_box.column_spacing = 4;
+            thumbs_box.valign = Gtk.Align.START;
+            thumbs_box.halign = Gtk.Align.START;
+            thumbs_box.max_children_per_line = 3; // 1行あたりのサムネ数上限
+
+            foreach (var url in image_urls) {
+                var thumb = new Gtk.Picture ();
+                thumb.content_fit = Gtk.ContentFit.CONTAIN;
+                thumb.width_request = THUMB_WIDTH;
+                thumb.height_request = THUMB_HEIGHT;
+                thumb.can_shrink = false;
+
+                // FlowBoxChild に包んで追加
+                var child = new Gtk.FlowBoxChild ();
+                child.set_child (thumb);
+                thumbs_box.insert (child, -1);
+
+                enqueue_image_download (url, thumb);
+            }
+
+            row_box.append (thumbs_box);
+        }
+
         var row = new Gtk.ListBoxRow ();
         row.set_child (row_box);
+
         return row;
     }
+
+    // private Gtk.ListBoxRow create_reply_row (ResRow.ResItem post) {
+    //     var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
+    //     row_box.margin_top = 6;
+    //     row_box.margin_bottom = 6;
+
+        //int indent_px = 0 * depth;  // しない
+    //     row_box.margin_start = 8;
+    //     row_box.margin_end = 16;
+
+    //     var header = new Gtk.Label (null);
+    //     header.use_markup = true;
+    //     header.xalign = 0.0f;
+    //     header.wrap = true;
+    //     header.wrap_mode = Pango.WrapMode.WORD_CHAR;
+
+    //     var body = new ClickableLabel ();
+
+        // 普段と同じ見出し・本文生成
+    //     set_post_widgets (post, header, body);
+
+    //     row_box.append (header);
+    //     row_box.append (body);
+
+    //     var row = new Gtk.ListBoxRow ();
+    //     row.set_child (row_box);
+    //     return row;
+    // }
 
 
     private async void go_up () {
