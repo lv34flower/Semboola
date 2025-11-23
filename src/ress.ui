@@ -33,7 +33,7 @@
           </object>
         </child>
         <child>
-          <object class="GtkScrolledWindow">
+          <object class="GtkScrolledWindow" id="scr_window">
             <property name="vexpand">True</property>
             <child>
               <object class="GtkListBox" id="listview">

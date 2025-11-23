@@ -70,6 +70,9 @@ public class RessView : Adw.NavigationPage {
     [GtkChild]
     unowned Gtk.ListBox listview;
 
+    [GtkChild]
+    unowned Gtk.ScrolledWindow scr_window;
+
     public RessView (string url, string name, int read) {
         // Object(
         //     title:name
@@ -316,7 +319,7 @@ public class RessView : Adw.NavigationPage {
         set_post_widgets (post, header, body);
 
         var header_click = new Gtk.GestureClick ();
-        header_click.set_button (0);
+        header_click.set_button (1);
 
         header_click.released.connect ((n_press, x, y) => {
             consume_row_click_once ();
@@ -416,7 +419,6 @@ public class RessView : Adw.NavigationPage {
 
 
                 Db.DB db = new Db.DB();
-                Sqlite.Statement st;
                 string sql = """
                     INSERT INTO threadlist (board_url, bbs_id, thread_id, current_res_count, favorite, last_touch_date, title)
                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
@@ -425,27 +427,8 @@ public class RessView : Adw.NavigationPage {
                     current_res_count = excluded.current_res_count,
                     last_touch_date = excluded.last_touch_date
                 """;
-                int rc = db.db.prepare_v2 (sql, -1, out st, null);
 
-                if (rc != Sqlite.OK) {
-	                stderr.printf ("Error: %d: %s\n", db.db.errcode (), db.db.errmsg ());
-	                return;
-                }
-
-                st.bind_text (1, site_base);
-                st.bind_text (2, board_key);
-                st.bind_text (3, threadkey);
-                st.bind_int  (4, posts.size);
-                st.bind_int  (5, 0);
-                st.bind_int64 (6, new DateTime.now_utc ().to_unix ());
-                st.bind_text (7, name);
-
-                rc = st.step ();
-                st.reset ();
-                if (rc != Sqlite.DONE) {
-                    stderr.printf ("Error: %d: %s\n", db.db.errcode (), db.db.errmsg ());
-                    win.show_error_toast (_("Database error"));
-                }
+                db.exec(sql, {site_base, board_key, threadkey, posts.size.to_string (), "0", new DateTime.now_utc ().to_unix ().to_string (), name});
 
             } catch {
                 win.show_error_toast (_("Database error"));
@@ -691,6 +674,9 @@ public class RessView : Adw.NavigationPage {
             return;
         }
 
+        // 慣性スクロールを一時的に切る
+        scr_window.kinetic_scrolling = false;
+
         // row の左上の座標を listbox 基準で取得
         double rx, ry;
         row.translate_coordinates (listview, 0, 0, out rx, out ry);
@@ -722,6 +708,7 @@ public class RessView : Adw.NavigationPage {
 
         Idle.add (() => {
             vadj.value = vle;
+            scr_window.kinetic_scrolling = true;
             return false; // 一回だけ
         });
 
