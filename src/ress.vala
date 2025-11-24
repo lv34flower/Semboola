@@ -570,7 +570,7 @@ public class RessView : Adw.NavigationPage {
 
             // クリック時に「キャッシュパス」を渡して拡大表示
             var click = new Gtk.GestureClick ();
-            click.set_button (0);
+            click.set_button (1);
             thumb.add_controller (click);
 
             // クロージャでパスをキャプチャしておく
