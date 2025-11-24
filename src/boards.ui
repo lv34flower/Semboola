@@ -57,6 +57,7 @@
         </child>
         <child>
           <object class="GtkScrolledWindow">
+            <property name="vscrollbar-policy">always</property>
             <child>
               <object class="GtkScrolledWindow">
                 <property name="hexpand">True</property>

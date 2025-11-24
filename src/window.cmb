@@ -2,16 +2,16 @@
 <!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
 <!-- Created with Cambalache 0.96.1 -->
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
-  <ui template-class="BoardsView" filename="boards.ui" sha256="28e7a3d826323db5c77ea9af8f946f0751e6997baac4f51f81205419a6ae54c0"/>
+  <ui template-class="BoardsView" filename="boards.ui" sha256="1be72b9905498bcce56f6a32e9d994747bfaf60ebc3ef4da57faa980c66b4a05"/>
   <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="46687e1d4b0fc9ebd1bcdf256261fcf6497807e96899cff8ddec603cc386f63c"/>
-  <ui template-class="ThreadsView" filename="threads.ui" sha256="929493df8a36327f0ebd55479534941be13492decdfc81a9436fba83468be303"/>
+  <ui template-class="ThreadsView" filename="threads.ui" sha256="551c4ec7f873830f77e4cde187a8f215ee88321ee706c99d76429133d2f86b22"/>
   <ui template-class="ThreadRow" filename="thread_row.ui" sha256="5696d61a684cfb71f5540b8260879f70794b8576938ea4be594d4bb00473b25f"/>
-  <ui template-class="RessView" filename="ress.ui" sha256="a893412e471332e2d5bb0cebf90ea8d533edcfecbc1c638933f6e08fa7daecf5"/>
+  <ui template-class="RessView" filename="ress.ui" sha256="06090a3e650ef8ed6c4d1d361d16cdb4c9639b44d17039b8015c5cf3d3703822"/>
   <ui template-class="new_thread" filename="new_thread.ui" sha256="6722a371519660ceaae663b419d713e22af1988f7741c6c5691dc946126c5097"/>
   <ui template-class="cookie_confirm" filename="cookie_confirm.ui" sha256="9e4fa0165941f9438fc11f8aedb99621fae27647bfb06f35240df4039c553fa4"/>
   <ui template-class="new_res" filename="new_res.ui" sha256="b30ad0c4873eadf6126e3257d4273524b449d87ccd115eab27f2424928fba1fc"/>
-  <ui template-class="thread_hist" filename="thread_hist.ui" sha256="aa1a9c62718e0fabec41cbd115125b44ba055c74ead1da4dfc8ed13d712ce4bd"/>
-  <ui template-class="replies" filename="replies.ui" sha256="b02f6a3bcd73ce2b368c591c6373c7f27b90896bca215075962d4281d4fa45a7"/>
+  <ui template-class="thread_hist" filename="thread_hist.ui" sha256="52e41e84ad3967e31ff7cf9b5f537cc327276ea643e6741aff30f25d236f9436"/>
+  <ui template-class="replies" filename="replies.ui" sha256="d3df851a2ab96322f1f95dff689043f122e38541c2e8f5d8a550d60e3e7e3411"/>
   <ui template-class="imageview" filename="imageview.ui" sha256="b4abbe26553a0d759e7e12a8b5eed45e25d8efbcc3096890a1d42d05daf88442"/>
   <ui template-class="SemboolaWindow" filename="window.ui" sha256="40cccb50e3b6a26c4329d6c9735f5e9415e9afef4a4c723e9bc32b8fdc8f03bf">
     <requires>BoardsView</requires>

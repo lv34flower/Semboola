@@ -29,6 +29,15 @@ public class imageview : Adw.NavigationPage {
 
     private bool initial_fit_done = false;
     private double zoom = 1.0;
+
+    // ジェスチャ中での scale 管理
+    private double last_scale = 1.0;          // 直前の scale
+    private double gesture_base_zoom = 1.0;   // ジェスチャ開始時の zoom
+
+    // ピンチ中心（ジェスチャ開始時に1回だけ決める）
+    private double gesture_center_x = 0.0;
+    private double gesture_center_y = 0.0;
+
     private int original_width = 0;
     private int original_height = 0;
 
@@ -90,17 +99,106 @@ public class imageview : Adw.NavigationPage {
         var gesture_zoom = new Gtk.GestureZoom ();
         picture.add_controller (gesture_zoom);
 
-        gesture_zoom.scale_changed.connect ((scale) => {
-            // scale はジェスチャ中の「相対倍率」
-            zoom = scale;
-            zoom = zoom.clamp (0.2, 8.0);  // 例えば 20%〜800% くらいに制限
+        gesture_zoom.begin.connect ((sequence) => {
+            gesture_base_zoom = zoom;
+            last_scale = 1.0;
 
-            int w = (int) (original_width * zoom);
-            int h = (int) (original_height * zoom);
+            // ピンチの中心を1回だけ記録
+            double cx = 0.0;
+            double cy = 0.0;
+            gesture_zoom.get_bounding_box_center (out cx, out cy);
 
-            picture.width_request = w;
-            picture.height_request = h;
+            // 取れなかったときの保険として Picture の中央も使う
+            if (cx == 0.0 && cy == 0.0) {
+                cx = picture.get_allocated_width ()  / 2.0;
+                cy = picture.get_allocated_height () / 2.0;
+            }
+
+            gesture_center_x = cx;
+            gesture_center_y = cy;
         });
+
+        gesture_zoom.scale_changed.connect ((scale) => {
+            if (original_width <= 0 || original_height <= 0)
+                return;
+            if (scale <= 0)
+                return;
+
+            // 今回のイベントでの相対倍率 delta
+            double delta = scale / last_scale;
+            last_scale = scale;
+
+            // 1回のイベントで変わって良い倍率に上限をつける（±10%）
+            const double MAX_STEP = 1.1;
+            const double MIN_STEP = 1.0 / MAX_STEP;
+
+            if (delta > MAX_STEP)
+                delta = MAX_STEP;
+            else if (delta < MIN_STEP)
+                delta = MIN_STEP;
+
+            double new_zoom = zoom * delta;
+            new_zoom = new_zoom.clamp (0.05, 32.0);
+
+            // ほとんど変化がないなら何もしない
+            if (Math.fabs (new_zoom - zoom) < 0.005)
+                return;
+
+            var hadj = scrolled.get_hadjustment ();
+            var vadj = scrolled.get_vadjustment ();
+
+            double old_zoom = zoom;
+            double content_w_before = original_width  * old_zoom;
+            double content_h_before = original_height * old_zoom;
+
+            double content_w_after  = original_width  * new_zoom;
+            double content_h_after  = original_height * new_zoom;
+
+            double cx = gesture_center_x;
+            double cy = gesture_center_y;
+
+            double old_x = hadj.value;
+            double old_y = vadj.value;
+
+            // 拡大前：画面上のどの位置を見ていたか（0.0〜1.0）
+            double rel_x = 0.0;
+            double rel_y = 0.0;
+
+            if (content_w_before > 0)
+                rel_x = (old_x + cx) / content_w_before;
+            if (content_h_before > 0)
+                rel_y = (old_y + cy) / content_h_before;
+
+            // ズーム更新
+            zoom = new_zoom;
+
+            int new_w = (int) (original_width  * zoom);
+            int new_h = (int) (original_height * zoom);
+
+            picture.width_request  = new_w;
+            picture.height_request = new_h;
+
+            // 拡大後も同じ「相対位置」が指の下に来るようにスクロールを補正
+            double new_x = rel_x * content_w_after - cx;
+            double new_y = rel_y * content_h_after - cy;
+
+            double max_x = hadj.upper - hadj.page_size;
+            double max_y = vadj.upper - vadj.page_size;
+
+            if (max_x < 0) max_x = 0;
+            if (max_y < 0) max_y = 0;
+
+            new_x = new_x.clamp (hadj.lower, max_x);
+            new_y = new_y.clamp (vadj.lower, max_y);
+
+            hadj.value = new_x;
+            vadj.value = new_y;
+        });
+
+        gesture_zoom.end.connect ((sequence) => {
+            last_scale = 1.0;
+        });
+
     }
 
     static construct {

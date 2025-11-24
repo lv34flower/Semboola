@@ -16,6 +16,7 @@
         <child>
           <object class="GtkScrolledWindow" id="listwindow">
             <property name="vexpand">True</property>
+            <property name="vscrollbar-policy">always</property>
           </object>
         </child>
       </object>

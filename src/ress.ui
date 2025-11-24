@@ -35,6 +35,7 @@
         <child>
           <object class="GtkScrolledWindow" id="scr_window">
             <property name="vexpand">True</property>
+            <property name="vscrollbar-policy">always</property>
             <child>
               <object class="GtkListBox" id="listview">
                 <property name="selection-mode">none</property>
