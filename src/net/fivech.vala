@@ -105,7 +105,7 @@ namespace FiveCh {
             if (!b.has_suffix ("/")) b += "/";
             return b;
         }
-        private string ensure_board_base () {
+        public string ensure_board_base () {
             // Construct https://{host}/{board_key}/
             var board_base = ensure_site_base () + board_key + "/";
             return board_base;
@@ -302,7 +302,11 @@ namespace FiveCh {
             form["submit"]  = opts.submit_label;
 
             opts.extra_headers = opts.extra_headers ?? new HashTable<string,string> (str_hash, str_equal);
-            opts.extra_headers["Referer"] = board.dat_url (key);
+            if (subject == null)
+                opts.extra_headers["Referer"] = board.dat_url (key);
+            else
+                opts.extra_headers["Referer"] = board.ensure_board_base (); // スレ立てのリファラは板のURL
+
             opts.extra_headers["Origin"] = board.site_base_url;
 
             string html = yield post_once_async (board, form, opts, cancel);
