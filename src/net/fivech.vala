@@ -806,7 +806,7 @@ namespace FiveCh {
                         // 16進: &#xHHHH;
                         if (ent.length >= 3 && (ent[1] == 'x' || ent[1] == 'X')) {
                             var hex = "0x" + ent.substring (2);
-                            code = (uint) int.parse (hex);
+                            code = uint.parse (hex);
                         } else {
                             // 10進: &#NNNN;
                             var dec = ent.substring (1);
