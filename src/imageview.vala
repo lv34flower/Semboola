@@ -92,7 +92,7 @@ public class imageview : Adw.NavigationPage {
 
         gesture_zoom.scale_changed.connect ((scale) => {
             // scale はジェスチャ中の「相対倍率」
-            zoom *= scale;
+            zoom = scale;
             zoom = zoom.clamp (0.2, 8.0);  // 例えば 20%〜800% くらいに制限
 
             int w = (int) (original_width * zoom);
