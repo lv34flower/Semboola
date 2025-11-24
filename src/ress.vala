@@ -505,8 +505,8 @@ public class RessView : Adw.NavigationPage {
         return Path.build_filename (dir, hex + ext);
     }
 
-    // 画像拡大表示用の簡易ビューア
-    private void show_image (string cache_path, string url) {
+    // 画像拡大表示用の簡易ビューアに遷移する
+    private async void show_image (string cache_path, string url) {
         // 次の画面へ遷移
         var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
         if (nav == null) {
@@ -579,7 +579,7 @@ public class RessView : Adw.NavigationPage {
 
             click.released.connect ((n_press, x, y) => {
                 if (n_press >= 1) {
-                    show_image (cp, u);
+                    show_image.begin (cp, u);
                 }
             });
 
