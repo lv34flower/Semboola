@@ -778,27 +778,33 @@ namespace FiveCh {
             MatchInfo mi;
             int last_end = 0;
 
+            // 直前に見つけた「高位サロゲート」用のバッファ
+            uint pending_high_surrogate = 0;
+            // 直前のエンティティの終了位置（サロゲートペアが「隣り合っている」か判定する用）
+            int prev_entity_end = -1;
+
             regex.match (src, 0, out mi);
             while (mi.matches ()) {
                 int start_pos, end_pos;
                 mi.fetch_pos (0, out start_pos, out end_pos);
 
-                // 直前までを追加
+                // 直前のエンティティの終端〜今回のエンティティ開始までのプレーンテキストを追加
                 sb.append (src.substring (last_end, start_pos - last_end));
 
                 // 中身だけ（& と ; を除いた部分）
                 var ent = mi.fetch (1);
-                unichar ch = 0;
-                bool replaced = false;
 
-                // 数値参照
-                if (ent[0] == '#') {
+                bool handled = false;   // エンティティを変換して出力できたかどうか
+
+                // ----------------------------------------------------
+                // 1) 数値参照（&#NNNN; / &#xHHHH;）
+                // ----------------------------------------------------
+                if (ent.length > 0 && ent[0] == '#') {
                     try {
                         uint code;
 
                         // 16進: &#xHHHH;
                         if (ent.length >= 3 && (ent[1] == 'x' || ent[1] == 'X')) {
-                            // "x"以降を0x付きにしてparse（Valaのparseは0xプレフィックス対応）
                             var hex = "0x" + ent.substring (2);
                             code = (uint) int.parse (hex);
                         } else {
@@ -807,58 +813,120 @@ namespace FiveCh {
                             code = (uint) int.parse (dec);
                         }
 
-                        if (code <= 0x10FFFF) {
-                            ch = (unichar) code;
-                            replaced = true;
+                        // ------- サロゲート＋サロゲートペア対応 --------
+
+                        if (code >= 0xD800 && code <= 0xDBFF) {
+                            // 高位サロゲート (high surrogate)
+                            // すでに高位が残っていたら、とりあえず置換文字にして流す
+                            if (pending_high_surrogate != 0) {
+                                sb.append_unichar ((unichar) 0xFFFD);
+                            }
+                            pending_high_surrogate = code;
+                            handled = true;   // まだ出力はしない（次の low を待つ）
+                        } else if (code >= 0xDC00 && code <= 0xDFFF) {
+                            // 低位サロゲート (low surrogate)
+                            if (pending_high_surrogate != 0 && prev_entity_end == start_pos) {
+                                // 直前に high があり、かつすぐ隣にある → サロゲートペアとして結合
+                                uint high = pending_high_surrogate;
+                                pending_high_surrogate = 0;
+
+                                uint full = 0x10000
+                                            + ((high - 0xD800) << 10)
+                                            + (code - 0xDC00);
+
+                                if (full <= 0x10FFFF) {
+                                    sb.append_unichar ((unichar) full);
+                                    handled = true;
+                                }
+                            } else {
+                                // 単独の low サロゲート → 置換文字にしておく
+                                sb.append_unichar ((unichar) 0xFFFD);
+                                handled = true;
+                            }
+                        } else if (code <= 0x10FFFF) {
+                            // 通常のコードポイント
+                            if (pending_high_surrogate != 0) {
+                                // 直前に high が余っていたら、ここで諦めて置換文字として吐く
+                                sb.append_unichar ((unichar) 0xFFFD);
+                                pending_high_surrogate = 0;
+                            }
+                            sb.append_unichar ((unichar) code);
+                            handled = true;
+                        } else {
+                            // 0x10FFFF を超えていたら不正なので無視（handled = false のまま）
                         }
+
                     } catch (Error e) {
-                        // 失敗時は replaced=false のまま
+                        // parse に失敗したら handled = false のまま
                     }
+
+                // ----------------------------------------------------
+                // 2) 名前付きエンティティ (&amp; など)
+                // ----------------------------------------------------
                 } else {
-                    // 名前付きエンティティ（必要なものだけ実装）
+                    unichar ch = 0;
                     switch (ent) {
                     case "lt":
                         ch = '<';
-                        replaced = true;
                         break;
                     case "gt":
                         ch = '>';
-                        replaced = true;
                         break;
                     case "amp":
                         ch = '&';
-                        replaced = true;
                         break;
                     case "quot":
                         ch = '"';
-                        replaced = true;
                         break;
                     case "apos":
                         ch = '\'';
-                        replaced = true;
                         break;
-                    // 必要ならここに追記:
-                    // case "nbsp": ch = 0x00A0; break;
+                    case "nbsp":
+                        ch = (unichar) 0x00A0;
+                        break;
                     default:
                         break;
                     }
+
+                    if (ch != 0) {
+                        if (pending_high_surrogate != 0) {
+                            // high が余っていたらここで潰す
+                            sb.append_unichar ((unichar) 0xFFFD);
+                            pending_high_surrogate = 0;
+                        }
+                        sb.append_unichar (ch);
+                        handled = true;
+                    }
                 }
 
-                if (replaced) {
-                    sb.append (ch.to_string ());
-                } else {
-                    // 変換できなければ元の &...; をそのまま残す
-                    sb.append (mi.fetch (0));
+                // ----------------------------------------------------
+                // 3) 変換できなかったときは元の &XXXX; をそのまま残す
+                // ----------------------------------------------------
+                if (!handled) {
+                    // high サロゲートが残っていたら先に吐いてリセット
+                    if (pending_high_surrogate != 0) {
+                        sb.append_unichar ((unichar) 0xFFFD);
+                        pending_high_surrogate = 0;
+                    }
+                    sb.append (mi.fetch (0));   // "&...;" まるごと
                 }
 
                 last_end = end_pos;
+                prev_entity_end = end_pos;  // 「次のエンティティが隣接しているか」判定用
                 mi.next ();
+            }
+
+            // ループ後、まだ高位サロゲートが残っていたら置換文字にする
+            if (pending_high_surrogate != 0) {
+                sb.append_unichar ((unichar) 0xFFFD);
+                pending_high_surrogate = 0;
             }
 
             // 残りを追加
             sb.append (src.substring (last_end));
             return sb.str;
         }
+
 
         public static string encode_html_entities (string src) {
             var sb = new StringBuilder ();
@@ -954,8 +1022,19 @@ namespace FiveCh {
                 //name = Client.decode_html_entities (name);
                 string mail = Client.decode_html_entities (parts[1]);
                 string date_id = Client.decode_html_entities (parts[2]);
-                string body = Client.decode_html_entities (parts[3]);
 
+                // DATの改行＆最低限のタグ処理
+                string body = parts[3]
+                    .replace (" <br> ", "\n")
+                    .replace ("<br>", "\n");
+                try {
+                    var tag_rx = new GLib.Regex ("<[^>]+>");
+                    body = tag_rx.replace (body, -1, 0, "");
+                } catch (Error e) {
+                    // タグ除去失敗時はそのまま
+                }
+                body = Client.decode_html_entities (body).strip ();
+//print(body+"\n");
                 string id = "";
                 // date_id から "ID:xxxxx" を抜く（簡易）
                 int pos = date_id.index_of ("ID:");
@@ -1003,18 +1082,7 @@ namespace FiveCh {
         public static Gee.ArrayList<Span> build (string raw_body) {
             var spans = new Gee.ArrayList<Span> ();
 
-            // DATの改行＆最低限のタグ処理
-            string body = raw_body
-                .replace ("<br>", "\n")
-                .replace ("<br />", "\n")
-                .replace ("<br/>", "\n");
-
-            try {
-                var tag_rx = new GLib.Regex ("<[^>]+>");
-                body = tag_rx.replace (body, -1, 0, "");
-            } catch (Error e) {
-                // タグ除去失敗時はそのまま
-            }
+            string body = raw_body;
 
             var token_rx = get_token_regex ();
 
