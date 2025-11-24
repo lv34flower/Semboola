@@ -506,7 +506,12 @@ public class RessView : Adw.NavigationPage {
     }
 
     // 画像拡大表示用の簡易ビューアに遷移する
-    private async void show_image (string cache_path, string url) {
+    private async void show_image (string cache_path, string url, Gtk.Picture thumb) {
+
+        if (!FileUtils.test (cache_path, FileTest.EXISTS)) {
+            load_image_thumbnail_async (url, thumb, true);
+            return;
+        }
         // 次の画面へ遷移
         var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
         if (nav == null) {
@@ -517,7 +522,7 @@ public class RessView : Adw.NavigationPage {
 
 
     // サムネ画像を非同期でロード（キャッシュ付き）して thumb Picture にセット
-    private async void load_image_thumbnail_async (string url, Gtk.Picture thumb) {
+    private async void load_image_thumbnail_async (string url, Gtk.Picture thumb, bool force=false) {
         try {
             var cache_path = get_image_cache_path (url);
             Gdk.Pixbuf? pixbuf_for_thumb = null;
@@ -535,6 +540,28 @@ public class RessView : Adw.NavigationPage {
             // 2. キャッシュが無い場合はダウンロードして保存 → 縮小
             if (pixbuf_for_thumb == null) {
                 var client = new FiveCh.Client ();
+
+                // HEAD でサイズチェック
+                var head_msg = new Soup.Message ("HEAD", url);
+                yield client.session.send_async (head_msg, Priority.DEFAULT, null);
+
+                if (head_msg.get_status () != Soup.Status.OK) {
+                    // HEAD でエラーなら諦める
+                    return;
+                }
+
+                // Content-Length を取得
+                int64 content_length = head_msg.response_headers.get_content_length ();
+
+                // Content-Length が 0以下（不明or0）または上限超えなら捨てる
+                // force==trueなら捨てない
+                if (!force) {
+                    if (content_length <= 0 || content_length > 1 * 1024 * 1024) {
+                        // ここで return すればサムネ無しで終わり
+                        return;
+                    }
+                }
+
                 var msg = new Soup.Message ("GET", url);
 
                 var bytes = yield client.session.send_and_read_async (msg, Priority.DEFAULT, null);
@@ -567,21 +594,6 @@ public class RessView : Adw.NavigationPage {
             // サムネ用テクスチャ作成
             var texture_thumb = Gdk.Texture.for_pixbuf (pixbuf_for_thumb);
             thumb.set_paintable (texture_thumb);
-
-            // クリック時に「キャッシュパス」を渡して拡大表示
-            var click = new Gtk.GestureClick ();
-            click.set_button (1);
-            thumb.add_controller (click);
-
-            // クロージャでパスをキャプチャしておく
-            string cp = cache_path;
-            string u = url;
-
-            click.released.connect ((n_press, x, y) => {
-                if (n_press >= 1) {
-                    show_image.begin (cp, u);
-                }
-            });
 
         } catch (Error e) {
             // 失敗時は何も表示しない
@@ -634,7 +646,7 @@ public class RessView : Adw.NavigationPage {
             running_image_downloads++;
 
             // async 関数を begin して、終わったらカウンタを戻す
-            load_image_thumbnail_async.begin (task.url, task.thumb, (obj, res) => {
+            load_image_thumbnail_async.begin (task.url, task.thumb, false, (obj, res) => {
                 try {
                     load_image_thumbnail_async.end (res);
                 } catch (Error e) {
@@ -1156,6 +1168,20 @@ public class RessView : Adw.NavigationPage {
                 var child = new Gtk.FlowBoxChild ();
                 child.set_child (thumb);
                 thumbs_box.insert (child, -1);
+
+                var click = new Gtk.GestureClick ();
+                click.set_button (0);
+                thumb.add_controller (click);
+
+                click.released.connect ((n_press, x, y) => {
+                    if (n_press >= 1) {
+                        Gtk.Widget? w = click.get_widget ();
+                        if (w is Gtk.Picture) {
+                            var pic = (Gtk.Picture) w;
+                            show_image.begin (get_image_cache_path (url),url, pic);
+                        }
+                    }
+                });
 
                 enqueue_image_download (url, thumb);
             }

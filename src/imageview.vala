@@ -141,7 +141,7 @@ public class imageview : Adw.NavigationPage {
             new_zoom = new_zoom.clamp (0.05, 32.0);
 
             // ほとんど変化がないなら何もしない
-            if (Math.fabs (new_zoom - zoom) < 0.005)
+            if (Math.fabs (new_zoom - zoom) < 0.001)
                 return;
 
             var hadj = scrolled.get_hadjustment ();
