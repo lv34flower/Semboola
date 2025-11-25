@@ -17,6 +17,7 @@ Semboola_sources = [
   'cookie_confirm.vala',
   'net/fivech.vala',
   'net/db.vala',
+  'common/common.vala',
 ]
 
 cc = meson.get_compiler('c')

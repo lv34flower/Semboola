@@ -90,47 +90,88 @@ public class RessView : Adw.NavigationPage {
     // 現在動いているダウンロード数
     private int running_image_downloads = 0;
 
+    // 直近で右クリックした行のindex
+    private uint right_clicked_row;
+    // 右クリックが行われたとき、画面に映っているインデックスの並び(1スタート)
+    private Gee.ArrayList<uint> right_clicked_indexes = new Gee.ArrayList<uint> ();
+
     [GtkChild]
     unowned Gtk.ListBox listview;
 
     [GtkChild]
     unowned Gtk.ScrolledWindow scr_window;
 
+    [GtkChild]
+    unowned Gtk.PopoverMenu context_popover;
+
+    private SimpleActionGroup page_actions;
+
     public RessView (string url, string name, int read) {
-        // Object(
-        //     title:name
-        // );
-        //
+
         this.url = url;
         this.name = name;
         this.read = read;
 
         loader = new DatLoader ();
 
-        // マウスクリック
+        setup_listbox_clicks (listview);
+
+        // NavigationView に push されて画面に出る直前〜直後に呼ばれる
+        this.shown.connect (() => {
+            win = this.get_root() as Semboola.Window;
+            right_clicked_indexes.clear (); // 並び=通常
+            init_load.begin ();
+        });
+
+    }
+
+    construct {
+        page_actions = new SimpleActionGroup ();
+
+        var copy_action = new SimpleAction ("copy", VariantType.STRING);
+        copy_action.activate.connect ((param) => {
+            on_copy_activate (param);
+        });
+        page_actions.add_action (copy_action);
+
+        // reply アクション
+        var reply_action = new SimpleAction ("reply", null);
+        reply_action.activate.connect ((param) => {
+            on_reply_activate ();
+        });
+        page_actions.add_action (reply_action);
+
+        // "page." プレフィックスでこのページに登録
+        this.insert_action_group ("win", page_actions);
+    }
+
+    static construct {
+        typeof (ResRow).ensure ();
+
+        // 行がアクティブ化されたとき（pos は行番号）
+        // listview.activate.connect (on_row_activated);
+    }
+
+    // Listboxクリック初期化
+    private void setup_listbox_clicks (Gtk.ListBox box) {
         var click = new Gtk.GestureClick ();
         click.set_button (0);
-        click.released.connect ((n_press, x, y) => {
 
-            // spanと競合しないよう
+        click.released.connect ((n_press, x, y) => {
             if (suppress_row_click_once)
                 return;
-
-            // LongPress 後の「離した左クリック」は1回だけ無視する
             if (suppress_after_long) {
                 suppress_after_long = false;
                 return;
             }
 
-            // どのボタンか
             uint button = click.get_current_button ();
 
-            // y は listview のローカル座標
-            var row = listview.get_row_at_y ((int) y);
+            var row = box.get_row_at_y ((int) y);
             if (row == null)
                 return;
 
-            int idx = row.get_index ();  // 0-based
+            int idx = row.get_index ();
             if (idx < 0 || idx >= posts.size)
                 return;
 
@@ -138,31 +179,25 @@ public class RessView : Adw.NavigationPage {
 
             switch (button) {
             case Gdk.BUTTON_PRIMARY:
-                // 左クリック
                 on_row_left_clicked (post, idx, n_press);
                 break;
             case Gdk.BUTTON_SECONDARY:
-                // 右クリック
-                on_row_right_clicked (post, idx, x, y);
-                break;
-            default:
-                // 中ボタンなど必要ならここに
+                on_row_right_clicked (click.widget as Gtk.ListBox, row, post, idx, x, y);
                 break;
             }
         });
 
-        listview.add_controller (click);
+        box.add_controller (click);
 
-        // タッチで右クリックエミュレーション
+        // LongPressも同様に box に対して付ける
         var longp = new Gtk.GestureLongPress ();
-        // タッチ専用にしておくとマウスの長押しには反応しない
         longp.set_touch_only (true);
 
         longp.pressed.connect ((x, y) => {
             if (suppress_row_click_once)
                 return;
 
-            var row = listview.get_row_at_y ((int) y);
+            var row = box.get_row_at_y ((int) y);
             if (row == null)
                 return;
 
@@ -173,27 +208,12 @@ public class RessView : Adw.NavigationPage {
             var post = posts[idx];
 
             suppress_after_long = true;
-
-            // 「タッチ長押し＝右クリック」と見なして同じハンドラへ
-            on_row_right_clicked (post, idx, x, y);
+            on_row_right_clicked (longp.widget as Gtk.ListBox, row, post, idx, x, y);
         });
 
-        listview.add_controller (longp);
-
-        // NavigationView に push されて画面に出る直前〜直後に呼ばれる
-        this.shown.connect (() => {
-            win = this.get_root() as Semboola.Window;
-            init_load.begin ();
-        });
-
+        box.add_controller (longp);
     }
 
-    static construct {
-        typeof (ResRow).ensure ();
-
-        // 行がアクティブ化されたとき（pos は行番号）
-        // listview.activate.connect (on_row_activated);
-    }
 
     // ヘッダをクリック
     private void on_header_clicked (ResRow.ResItem post, int row_index, int n_press) {
@@ -213,8 +233,36 @@ public class RessView : Adw.NavigationPage {
     }
 
     // 右クリック
-    private void on_row_right_clicked (ResRow.ResItem post, int row_index, double x, double y) {
-        win.show_error_toast ("test- r");
+    private void on_row_right_clicked (Gtk.ListBox listbox, ListBoxRow row ,ResRow.ResItem post, int row_index, double x, double y) {
+        right_clicked_row = post.index;
+        show_context_menu_for_row (listbox, row, x, y);
+    }
+    private void show_context_menu_for_row (Gtk.ListBox listbox, ListBoxRow row, double x, double y) {
+        // Popover の親は ScrolledWindow に統一安倍晋三
+        var pop    = context_popover;
+
+        // listview 座標 -> scr_window 座標 に変換
+        Graphene.Point src = Graphene.Point ();             // Graphene.Point
+        src.init ((float)x, (float)y);
+        Graphene.Point dest;
+
+        // listview 座標 -> scr_window 座標 に変換
+        if (!listbox.compute_point (win, src, out dest)) {
+            return;
+        }
+
+        Gdk.Rectangle rect = {
+            (int)dest.x,
+            (int)dest.y,
+            1,
+            1
+        };
+
+        // 親はスクロールウィンドウに固定
+        pop.set_parent (this);
+        pop.set_pointing_to (rect);
+
+        pop.popup ();
     }
 
     private void set_post_widgets (ResRow.ResItem post, Gtk.Label header, ClickableLabel body) {
@@ -926,6 +974,8 @@ public class RessView : Adw.NavigationPage {
         if (id_list == null)
             return;
 
+        setup_listbox_clicks (id_list);
+
         // 次の画面へ遷移
         var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
         if (nav == null) {
@@ -935,6 +985,7 @@ public class RessView : Adw.NavigationPage {
     }
 
     public Gtk.ListBox create_id_listbox (string id) {
+        right_clicked_indexes.clear ();
 
         var id_list = new Gtk.ListBox ();
         id_list.show_separators = true;
@@ -945,6 +996,9 @@ public class RessView : Adw.NavigationPage {
             var p = posts[(int) idx-1];
             var row = build_row_for_post (p);
             id_list.append (row);
+
+            // 並びを保存
+            right_clicked_indexes.add (idx);
         }
         return id_list;
     }
@@ -956,6 +1010,8 @@ public class RessView : Adw.NavigationPage {
         if (tree_list == null)
             return;
 
+        setup_listbox_clicks (tree_list);
+
         // 次の画面へ遷移
         var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
         if (nav == null) {
@@ -965,6 +1021,7 @@ public class RessView : Adw.NavigationPage {
     }
 
     public Gtk.ListBox create_reply_tree_listbox (uint start_idx) {
+        right_clicked_indexes.clear ();
         uint root = find_conversation_root (start_idx);
 
         Gee.ArrayList<uint> order;
@@ -990,6 +1047,9 @@ public class RessView : Adw.NavigationPage {
             var row = build_row_for_post (post);
 
             tree_list.append (row);
+
+            // 並びを保存
+            right_clicked_indexes.add (idx);
         }
 
         return tree_list;
@@ -1139,7 +1199,7 @@ public class RessView : Adw.NavigationPage {
         });
 
         body.span_right_clicked.connect ((span, x, y) => {
-            on_span_right_clicked (post, span, x, y, body);
+            //on_span_right_clicked (post, span, x, y, body);
         });
 
         row_box.append (header);
@@ -1195,34 +1255,72 @@ public class RessView : Adw.NavigationPage {
         return row;
     }
 
-    // private Gtk.ListBoxRow create_reply_row (ResRow.ResItem post) {
-    //     var row_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2);
-    //     row_box.margin_top = 6;
-    //     row_box.margin_bottom = 6;
+    private async void add (int index) {
+        var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
+        var popup = new new_res (window, g_app, url, index);
+        popup.submitted.connect (() => {
+            // 終わったら再読み込み
+            this.reload.begin ();
+        });
+        popup.present ();
+    }
 
-        //int indent_px = 0 * depth;  // しない
-    //     row_box.margin_start = 8;
-    //     row_box.margin_end = 16;
+    // argで指定されたものをコピー
+    private async void copy (string arg) {
+        StringBuilder sb = new StringBuilder ();
 
-    //     var header = new Gtk.Label (null);
-    //     header.use_markup = true;
-    //     header.xalign = 0.0f;
-    //     header.wrap = true;
-    //     header.wrap_mode = Pango.WrapMode.WORD_CHAR;
+        int r;
+        if (right_clicked_indexes.is_empty) {
+            r = (int) right_clicked_row;
+        } else {
+            r = (int) right_clicked_indexes[(int) right_clicked_row-1];
+        }
 
-    //     var body = new ClickableLabel ();
+        var p = posts[r-1];
 
-        // 普段と同じ見出し・本文生成
-    //     set_post_widgets (post, header, body);
+        // 名前を戻す
+        Pango.AttrList attrs;
+        string plain;
+        unichar accel_char;
 
-    //     row_box.append (header);
-    //     row_box.append (body);
+        string clean_name;
+        try {
+            Pango.parse_markup (p.name, -1, '_',
+                            out attrs, out plain, out accel_char);
+            clean_name = plain;
+        } catch (Error e) {
+            clean_name = p.name;
+        }
 
-    //     var row = new Gtk.ListBoxRow ();
-    //     row.set_child (row_box);
-    //     return row;
-    // }
 
+        switch (arg) {
+            case "url":
+                sb.append (DatLoader.build_browser_url (url) + r.to_string ());
+                break;
+            case "name":
+                sb.append (clean_name);
+                break;
+            case "ID":
+                sb.append (p.id);
+                break;
+            case "text":
+                sb.append (p.body);
+                break;
+            case "set":
+                sb.append (r.to_string ()).append (" ");
+                sb.append (clean_name).append (" ");
+                sb.append (p.mail).append (" ");
+                sb.append (p.date).append (" ");
+                sb.append (p.id).append ("\n");
+                sb.append (p.body);
+                break;
+            default:
+                return;
+        }
+
+        common.copy_to_clipboard (sb.str);
+        win.show_error_toast (_("Copied."));
+    }
 
     private async void go_up () {
         scroll_to_post (1);
@@ -1232,20 +1330,13 @@ public class RessView : Adw.NavigationPage {
             scroll_to_post (posts.size);
         } else {
             scroll_to_post (read);
-            print(read.to_string ());
             is_read = true;
         }
     }
 
     [GtkCallback]
     private void on_add_click () {
-        var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
-        var popup = new new_res (window, g_app, url);
-        popup.submitted.connect (() => {
-            // 終わったら再読み込み
-            this.reload.begin ();
-        });
-        popup.present ();
+        add.begin (-1);
     }
 
     [GtkCallback]
@@ -1261,5 +1352,21 @@ public class RessView : Adw.NavigationPage {
     [GtkCallback]
     private void on_down_click () {
         go_down.begin ();
+    }
+
+    private void on_reply_activate () {
+        int r;
+        if (right_clicked_indexes.is_empty) {
+            r = (int) right_clicked_row;
+        } else {
+            r = (int) right_clicked_indexes[(int) right_clicked_row-1];
+        }
+        message (right_clicked_indexes.size.to_string ());
+        add.begin (r);
+    }
+
+    private void on_copy_activate (Variant? param) {
+        string arg = param.get_string ();
+        copy.begin (arg);
     }
 }

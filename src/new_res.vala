@@ -41,7 +41,7 @@ public class new_res : Adw.ApplicationWindow {
     private string url;
     private FiveCh.Board board;
 
-    public new_res (Gtk.Window parent, Adw.Application app, string u) {
+    public new_res (Gtk.Window parent, Adw.Application app, string u, int index) {
         Object (application: app, transient_for: parent);
         url = u;
         board  = new FiveCh.Board(FiveCh.Board.guess_site_base_from_url (url), FiveCh.Board.guess_board_key_from_url (url));
@@ -69,6 +69,11 @@ public class new_res : Adw.ApplicationWindow {
                 textbuffer.set_text (r["text"]);
                 break;
             }
+
+            if (index > 0) {
+                textbuffer.text = textbuffer.text + ">>%d\n".printf (index);
+            }
+
         } catch (Error e) {
             win.show_error_toast (e.message);
             print(e.message);

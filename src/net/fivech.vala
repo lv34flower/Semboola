@@ -998,6 +998,19 @@ namespace FiveCh {
             return null;
         }
 
+        public static string? build_browser_url (string urlr) {
+            string url = urlr.strip ();
+
+            string? board_key = FiveCh.Board.guess_board_key_from_url (url);
+            string? site_base = FiveCh.Board.guess_site_base_from_url (url);
+            string? thread_key = guess_threadkey_from_url (url);
+            if (board_key == null || site_base == null || thread_key == null) {
+                throw new IOError.FAILED (_("Invalid URL"));
+            }
+
+            return site_base + "read.cgi/" + board_key + "/" + thread_key + "/";
+        }
+
         private static Gee.ArrayList<ResRow.ResItem> parse_dat_text (string text) {
             var list = new Gee.ArrayList<ResRow.ResItem> ();
             var lines = text.split ("\n");
