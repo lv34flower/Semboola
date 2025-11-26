@@ -149,6 +149,18 @@ namespace FiveCh {
             } catch (Error e) { }
             return null;
         }
+
+        public static string? build_browser_url (string urlr) {
+            string url = urlr.strip ();
+
+            string? board_key = guess_board_key_from_url (url);
+            string? site_base = guess_site_base_from_url (url);
+            if (board_key == null || site_base == null) {
+                throw new IOError.FAILED (_("Invalid URL"));
+            }
+
+            return site_base + "test/read.cgi/" + board_key + "/";
+        }
     }
 
     /** Main client wrapping libsoup3 */
@@ -1008,7 +1020,7 @@ namespace FiveCh {
                 throw new IOError.FAILED (_("Invalid URL"));
             }
 
-            return site_base + "read.cgi/" + board_key + "/" + thread_key + "/";
+            return site_base + "test/read.cgi/" + board_key + "/" + thread_key + "/";
         }
 
         private static Gee.ArrayList<ResRow.ResItem> parse_dat_text (string text) {

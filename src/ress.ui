@@ -30,6 +30,9 @@
                 <property name="menu-model">primary_menu</property>
                 <property name="primary">True</property>
                 <property name="tooltip-text" translatable="yes">Main Menu</property>
+                <child>
+                  <menu/>
+                </child>
               </object>
             </child>
           </object>
@@ -92,59 +95,62 @@
             <property name="height-request">320</property>
             <property name="menu-model">context_menu</property>
             <property name="vexpand">True</property>
-            <child>
-              <menu id="context_menu">
-                <item>
-                  <attribute name="action">win.reply</attribute>
-                  <attribute name="icon">mail-reply-sender-symbolic</attribute>
-                  <attribute name="label" translatable="yes">Reply</attribute>
-                </item>
-                <submenu>
-                  <attribute name="label" translatable="yes">Copy</attribute>
-                  <item>
-                    <attribute name="action">win.copy</attribute>
-                    <attribute name="label" translatable="yes">From</attribute>
-                    <attribute name="target">name</attribute>
-                  </item>
-                  <item>
-                    <attribute name="action">win.copy</attribute>
-                    <attribute name="label" translatable="yes">ID</attribute>
-                    <attribute name="target">ID</attribute>
-                  </item>
-                  <item>
-                    <attribute name="action">win.copy</attribute>
-                    <attribute name="label" translatable="yes">Text</attribute>
-                    <attribute name="target">text</attribute>
-                  </item>
-                  <item>
-                    <attribute name="action">win.copy</attribute>
-                    <attribute name="label" translatable="yes">Header + text</attribute>
-                    <attribute name="target">set</attribute>
-                  </item>
-                  <item>
-                    <attribute name="action">win.copy</attribute>
-                    <attribute name="label" translatable="yes">URL</attribute>
-                    <attribute name="target">url</attribute>
-                  </item>
-                </submenu>
-              </menu>
-            </child>
           </object>
         </child>
       </object>
     </child>
+    <child>
+      <menu id="context_menu">
+        <item>
+          <attribute name="action">win.reply</attribute>
+          <attribute name="label" translatable="yes">Reply</attribute>
+        </item>
+        <submenu>
+          <attribute name="label" translatable="yes">Copy</attribute>
+          <item>
+            <attribute name="action">win.copy</attribute>
+            <attribute name="label" translatable="yes">Name</attribute>
+            <attribute name="target">name</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.copy</attribute>
+            <attribute name="label" translatable="yes">ID</attribute>
+            <attribute name="target">ID</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.copy</attribute>
+            <attribute name="label" translatable="yes">Text</attribute>
+            <attribute name="target">text</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.copy</attribute>
+            <attribute name="label" translatable="yes">Header+text</attribute>
+            <attribute name="target">set</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.copy</attribute>
+            <attribute name="label" translatable="yes">URL</attribute>
+            <attribute name="target">url</attribute>
+          </item>
+        </submenu>
+      </menu>
+    </child>
+    <child>
+      <menu id="primary_menu">
+        <section>
+          <attribute name="label" translatable="yes">Copy</attribute>
+          <item>
+            <attribute name="action">win.copy</attribute>
+            <attribute name="label" translatable="yes">URL</attribute>
+            <attribute name="target">thread_url</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.copy</attribute>
+            <attribute name="label" translatable="yes">Subject</attribute>
+            <attribute name="target">subject</attribute>
+          </item>
+        </section>
+      </menu>
+    </child>
   </template>
-  <menu id="primary_menu">
-    <section>
-      <attribute name="label" translatable="yes">Copy</attribute>
-      <item>
-        <attribute name="action">win.copy_thread_url</attribute>
-        <attribute name="label" translatable="yes">URL</attribute>
-      </item>
-      <item>
-        <attribute name="action">win.copy_subject</attribute>
-        <attribute name="label" translatable="yes">Subject</attribute>
-      </item>
-    </section>
-  </menu>
 </interface>

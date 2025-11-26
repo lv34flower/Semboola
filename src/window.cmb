@@ -3,10 +3,10 @@
 <!-- Created with Cambalache 0.96.1 -->
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
   <ui template-class="BoardsView" filename="boards.ui" sha256="1be72b9905498bcce56f6a32e9d994747bfaf60ebc3ef4da57faa980c66b4a05"/>
-  <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="46687e1d4b0fc9ebd1bcdf256261fcf6497807e96899cff8ddec603cc386f63c"/>
+  <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="1cfc7805f7832efc3a13b4da61dc2e64786fc9cc322439fa5e166a029a67d8fe"/>
   <ui template-class="ThreadsView" filename="threads.ui" sha256="551c4ec7f873830f77e4cde187a8f215ee88321ee706c99d76429133d2f86b22"/>
   <ui template-class="ThreadRow" filename="thread_row.ui" sha256="5696d61a684cfb71f5540b8260879f70794b8576938ea4be594d4bb00473b25f"/>
-  <ui template-class="RessView" filename="ress.ui" sha256="1b2e6f357d18c6d306fe836298ff665cd4b05570515e6a0220b4730ceaad3c65"/>
+  <ui template-class="RessView" filename="ress.ui" sha256="fb77225a1012e4c53de5ce8d1d6d6bc76acf1585a12fd666ef73252328e86621"/>
   <ui template-class="new_thread" filename="new_thread.ui" sha256="6722a371519660ceaae663b419d713e22af1988f7741c6c5691dc946126c5097"/>
   <ui template-class="cookie_confirm" filename="cookie_confirm.ui" sha256="9e4fa0165941f9438fc11f8aedb99621fae27647bfb06f35240df4039c553fa4"/>
   <ui template-class="new_res" filename="new_res.ui" sha256="b30ad0c4873eadf6126e3257d4273524b449d87ccd115eab27f2424928fba1fc"/>

@@ -91,7 +91,7 @@ public class RessView : Adw.NavigationPage {
     private int running_image_downloads = 0;
 
     // 直近で右クリックした行のindex
-    private uint right_clicked_row;
+    private uint right_clicked_row = 1;
     // 右クリックが行われたとき、画面に映っているインデックスの並び(1スタート)
     private Gee.ArrayList<uint> right_clicked_indexes = new Gee.ArrayList<uint> ();
 
@@ -141,7 +141,7 @@ public class RessView : Adw.NavigationPage {
         });
         page_actions.add_action (reply_action);
 
-        // "page." プレフィックスでこのページに登録
+        // "win." プレフィックスでこのページに登録
         this.insert_action_group ("win", page_actions);
     }
 
@@ -1313,6 +1313,12 @@ public class RessView : Adw.NavigationPage {
                 sb.append (p.date).append (" ");
                 sb.append (p.id).append ("\n");
                 sb.append (p.body);
+                break;
+            case "thread_url":
+                sb.append (DatLoader.build_browser_url (url));
+                break;
+            case "subject":
+                sb.append (this.name);
                 break;
             default:
                 return;
