@@ -378,6 +378,7 @@ public class RessView : Adw.NavigationPage {
         try {
             var cancellable = new Cancellable ();
             var new_posts = yield loader.load_from_url_async (url, cancellable);
+            name = loader.get_title ();
 
             int old_count = (posts != null) ? posts.size : 0;
             int new_count = new_posts.size;
@@ -456,9 +457,7 @@ public class RessView : Adw.NavigationPage {
     private bool suppress_after_long = false;
 
     // -------- Spanクリック時の動作 --------
-
-    private void on_span_left_clicked (ResRow.ResItem post, Span span) {
-
+    private async void span_click (ResRow.ResItem post, Span span) {
         switch (span.type) {
         case SpanType.REPLY:
             if (span.payload != null) {
@@ -471,25 +470,31 @@ public class RessView : Adw.NavigationPage {
                 scroll_to_post (target);
             }
             break;
-        case SpanType.URL:
-            if (span.payload != null) {
-                try {
-                    var launcher = new Gtk.UriLauncher (span.payload);
-                    launcher.launch.begin (null, null);
-                } catch (Error e) {
-                    // 失敗時は無視
-                }
-            }
-            break;
         case SpanType.ID:
             if (span.payload != null) {
                 var target = span.payload.substring (3, -1);
                 open_id_page(target);
             }
             break;
+        case SpanType.URL:
+        case SpanType.URL_BOARD:
+        case SpanType.URL_THREAD:
+            if (span.payload != null) {
+                var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+                if (nav == null) {
+                    return;
+                }
+                common.open_url (span.payload, nav);
+            }
+            break;
         default:
             return;
         }
+    }
+
+    private void on_span_left_clicked (ResRow.ResItem post, Span span) {
+
+        span_click.begin (post, span);
         consume_row_click_once ();
     }
 

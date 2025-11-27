@@ -968,6 +968,8 @@ namespace FiveCh {
             client = new FiveCh.Client ();
         }
 
+        private string full_text;
+
         /**
           * URL または dat URL から Board / threadkey を推定して1回分の DAT を取得。
           */
@@ -990,6 +992,7 @@ namespace FiveCh {
 
             // 全体を一気に読む
             var chunk = yield client.fetch_dat_async (board, threadkey, -1, cancellable);
+            full_text = chunk.text;
             return parse_dat_text (chunk.text);
         }
 
@@ -1073,6 +1076,26 @@ namespace FiveCh {
             }
             return list;
         }
+
+        public string get_title ()
+        {
+            var lines = full_text.split ("\n");
+
+            foreach (var raw_line in lines) {
+                var line = raw_line.strip ();
+                if (line.length == 0) break;
+
+                var parts = line.split ("<>");
+
+                if (parts.length > 4 && parts[4] != "") {
+                    return parts[4];
+                }
+                break;
+            }
+            // 尾張
+            return "";
+        }
+
     }
 
     /**
@@ -1086,7 +1109,7 @@ namespace FiveCh {
         // Regex は遅延初期化（例外はここで握りつぶして null 許容）
         private static GLib.Regex? _token_regex = null;
 
-        private static GLib.Regex? get_token_regex () {
+        public static GLib.Regex? get_token_regex () {
             if (_token_regex != null)
                 return _token_regex;
 
@@ -1094,7 +1117,8 @@ namespace FiveCh {
                 // >>数字 or URL
                 _token_regex = new GLib.Regex (
                     // >>1 / >>1-3 / >>1,2,3 / >>1-3,5-7,...
-                    "(>>(?:[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*))|(https?://(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(?::[0-9]{2,5})?(?:/[^\\s<>\"']*)?)|(ID:[A-Za-z0-9]+)",
+                    "(>>(?:[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*))|(https?://(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(?::[0-9]{2,5})?/test/read.cgi/[^/]+/[0-9]+(?:/[0-9]+)?/?)|(https?://(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(?::[0-9]{2,5})?/[^/]+/?)|(https?://(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(?::[0-9]{2,5})?(?:/[^\\s<>\"']*)?)|(ID:[A-Za-z0-9]+)",
+
                     GLib.RegexCompileFlags.CASELESS | GLib.RegexCompileFlags.MULTILINE
                 );
             } catch (Error e) {
@@ -1136,8 +1160,10 @@ namespace FiveCh {
 
                 var full = mi.fetch (0);
                 var g_reply = mi.fetch (1);
-                var g_url = mi.fetch (2);
-                var g_id = mi.fetch(3);
+                var g_threadurl = mi.fetch (2);
+                var g_boardurl = mi.fetch(3);
+                var g_url = mi.fetch (4);
+                var g_id = mi.fetch (5);
 
                 if (g_reply != null && g_reply.length > 0) {
                     string num = g_reply.substring (2);
@@ -1146,6 +1172,10 @@ namespace FiveCh {
                     spans.add (new Span (full, SpanType.URL, full));
                 } else if (g_id != null && g_id.length > 0){
                     spans.add (new Span (full, SpanType.ID, full));
+                } else if (g_threadurl != null && g_threadurl.length > 0 ) {
+                    spans.add (new Span (full, SpanType.URL_THREAD, full));
+                } else if (g_boardurl != null && g_boardurl.length > 0 ) {
+                    spans.add (new Span (full, SpanType.URL_BOARD, full));
                 } else {
                     spans.add (new Span (full, SpanType.NORMAL));
                 }

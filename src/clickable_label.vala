@@ -109,6 +109,14 @@ public class ClickableLabel : Gtk.Box {
                 // 赤
                 sb.append (@"<span foreground='#c03030'>$esc</span>");
                 break;
+            case SpanType.URL_THREAD:
+                // 茶色
+                sb.append (@"<span foreground='#808020'><u>$esc</u></span>");
+                break;
+            case SpanType.URL_BOARD:
+                // 茶色
+                sb.append (@"<span foreground='#808080'><u>$esc</u></span>");
+                break;
             default:
                 sb.append (esc);
                 break;
