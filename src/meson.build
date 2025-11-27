@@ -18,6 +18,7 @@ Semboola_sources = [
   'net/fivech.vala',
   'net/db.vala',
   'common/common.vala',
+  'common/image.vala',
 ]
 
 cc = meson.get_compiler('c')

@@ -28,10 +28,6 @@ using Soup;
 
 [GtkTemplate (ui = "/jp/lv34/Semboola/ress.ui")]
 public class RessView : Adw.NavigationPage {
-    private const int THUMB_WIDTH = 80;
-    private const int THUMB_HEIGHT = 80;
-    // 画像ダウンロードの並列上限
-    private const int MAX_PARALLEL_IMAGE_DOWNLOADS = 4;
 
     private string url;
     private string name;
@@ -42,6 +38,8 @@ public class RessView : Adw.NavigationPage {
 
     private DatLoader loader;
 
+    private ImageControl imgcon = new ImageControl ();
+
     //private GLib.ListStore store = new GLib.ListStore (typeof (ResRow.ResItem));
     private Gee.ArrayList<ResRow.ResItem> posts;
 
@@ -50,20 +48,6 @@ public class RessView : Adw.NavigationPage {
 
     // to:   レス i が、どのレスからアンカーされているか (sources -> i)
     private Gee.ArrayList<Gee.ArrayList<uint>> replied_from;
-
-    // 待ち行列
-    private Gee.Queue<ImageDownloadTask> image_download_queue = new Gee.LinkedList<ImageDownloadTask> ();
-
-    // 画像ダウンロードタスク
-    private class ImageDownloadTask : Object {
-        public string url;
-        public weak Gtk.Picture thumb;
-
-        public ImageDownloadTask (string url, Gtk.Picture thumb) {
-            this.url = url;
-            this.thumb = thumb;
-        }
-    }
 
     // ID このIDが何レスしているか
     private class IdStats : Object {
@@ -86,9 +70,6 @@ public class RessView : Adw.NavigationPage {
 
     // ここまでロード
     private int res_count = 0;
-
-    // 現在動いているダウンロード数
-    private int running_image_downloads = 0;
 
     // 直近で右クリックした行のindex
     private uint right_clicked_row = 1;
@@ -474,239 +455,6 @@ public class RessView : Adw.NavigationPage {
     // 長押しと左クリックが競合するのを防ぐ
     private bool suppress_after_long = false;
 
-    // --画像サムネイル系
-    // 画像 URL かどうか判定（拡張子ベース）
-    private static bool is_image_url (string url) {
-        if (url == null)
-            return false;
-
-        // クエリ・フラグメントは切り捨ててから判定
-        string lower = url.down ();
-        int q = lower.index_of_char ('?');
-        if (q >= 0)
-            lower = lower.substring (0, q);
-        int hash = lower.index_of_char ('#');
-        if (hash >= 0)
-            lower = lower.substring (0, hash);
-
-        return lower.has_suffix (".jpg")
-            || lower.has_suffix (".jpeg")
-            || lower.has_suffix (".png")
-            || lower.has_suffix (".gif");
-    }
-
-    // レス内に含まれる「画像URL」を全部返す
-    private Gee.ArrayList<string> find_image_urls_for_post (ResRow.ResItem post) {
-        var result = new Gee.ArrayList<string> ();
-
-        var spans = post.get_spans ();
-        if (spans == null)
-            return result;
-
-        foreach (var span in spans) {
-            if (span.type == SpanType.URL && span.payload != null) {
-                var url = span.payload;
-                if (is_image_url (url)) {
-                    result.add (url);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    // 画像キャッシュ用のパスを作る
-    private string get_image_cache_path (string url) {
-        // ~/.cache/Semboola/thumbs
-        var cache_root = Environment.get_user_cache_dir ();
-        var dir = Path.build_filename (cache_root, "Semboola", "thumbs");
-
-        try {
-            DirUtils.create_with_parents (dir, 0755);
-        } catch (Error e) {
-            // 作れなかったら諦めてキャッシュ無しで続行
-        }
-
-        // 拡張子を元URLから取り出す（? # 以降は除外）
-        string lower = url.down ();
-        int q = lower.index_of_char ('?');
-        if (q >= 0)
-            lower = lower.substring (0, q);
-        int hash = lower.index_of_char ('#');
-        if (hash >= 0)
-            lower = lower.substring (0, hash);
-
-        string ext = ".img";
-        int dot = lower.last_index_of (".");
-        if (dot >= 0 && dot + 1 < lower.length) {
-            ext = lower.substring (dot);
-            if (!(ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif")) {
-                ext = ".img";
-            }
-        }
-
-        // URL を SHA256 でハッシュしてファイル名にする
-        var checksum = new Checksum (ChecksumType.SHA256);
-        checksum.update (url.data, (size_t) url.length);
-        var hex = checksum.get_string ();
-
-        return Path.build_filename (dir, hex + ext);
-    }
-
-    // 画像拡大表示用の簡易ビューアに遷移する
-    private async void show_image (string cache_path, string url, Gtk.Picture thumb) {
-
-        if (!FileUtils.test (cache_path, FileTest.EXISTS)) {
-            load_image_thumbnail_async (url, thumb, true);
-            return;
-        }
-        // 次の画面へ遷移
-        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
-        if (nav == null) {
-            return;
-        }
-        nav.push(new imageview (url, cache_path));
-    }
-
-
-    // サムネ画像を非同期でロード（キャッシュ付き）して thumb Picture にセット
-    private async void load_image_thumbnail_async (string url, Gtk.Picture thumb, bool force=false) {
-        try {
-            var cache_path = get_image_cache_path (url);
-            Gdk.Pixbuf? pixbuf_for_thumb = null;
-
-            // 1. キャッシュからサムネ用 Pixbuf を作る
-            if (FileUtils.test (cache_path, FileTest.EXISTS)) {
-                try {
-                    var original = new Gdk.Pixbuf.from_file (cache_path);
-                    pixbuf_for_thumb = scale_pixbuf_for_thumb (original);
-                } catch (Error e) {
-                    pixbuf_for_thumb = null;
-                }
-            }
-
-            // 2. キャッシュが無い場合はダウンロードして保存 → 縮小
-            if (pixbuf_for_thumb == null) {
-                var client = new FiveCh.Client ();
-
-                // HEAD でサイズチェック
-                var head_msg = new Soup.Message ("HEAD", url);
-                yield client.session.send_async (head_msg, Priority.DEFAULT, null);
-
-                if (head_msg.get_status () != Soup.Status.OK) {
-                    // HEAD でエラーなら諦める
-                    return;
-                }
-
-                // Content-Length を取得
-                int64 content_length = head_msg.response_headers.get_content_length ();
-
-                // Content-Length が 0以下（不明or0）または上限超えなら捨てる
-                // force==trueなら捨てない
-                if (!force) {
-                    if (content_length <= 0 || content_length > 1 * 1024 * 1024) {
-                        // ここで return すればサムネ無しで終わり
-                        return;
-                    }
-                }
-
-                var msg = new Soup.Message ("GET", url);
-
-                var bytes = yield client.session.send_and_read_async (msg, Priority.DEFAULT, null);
-                if (msg.get_status () != Soup.Status.OK)
-                    return;
-
-                unowned uint8[] data = bytes.get_data ();
-
-                // キャッシュ保存
-                try {
-                    FileUtils.set_data (cache_path, data);
-                } catch (Error e) {
-                }
-
-                // PixbufLoaderで画像として解釈
-                var loader = new Gdk.PixbufLoader ();
-                loader.write (data);
-                loader.close ();
-
-                var original = loader.get_pixbuf ();
-                if (original == null)
-                    return;
-
-                pixbuf_for_thumb = scale_pixbuf_for_thumb (original);
-            }
-
-            if (pixbuf_for_thumb == null)
-                return;
-
-            // サムネ用テクスチャ作成
-            var texture_thumb = Gdk.Texture.for_pixbuf (pixbuf_for_thumb);
-            thumb.set_paintable (texture_thumb);
-
-        } catch (Error e) {
-            // 失敗時は何も表示しない
-        }
-    }
-
-
-
-    // Pixbuf をサムネ用に縮小して返す
-    private Gdk.Pixbuf scale_pixbuf_for_thumb (Gdk.Pixbuf src) {
-        int w = src.get_width ();
-        int h = src.get_height ();
-
-        if (w <= 0 || h <= 0)
-            return src;
-
-        // 目標サイズに収まるようにスケール
-        double scale_w = (double) THUMB_WIDTH / (double) w;
-        double scale_h = (double) THUMB_HEIGHT / (double) h;
-        double scale = Math.fmin (1.0, Math.fmin (scale_w, scale_h)); // 拡大はしない
-
-        int new_w = (int) Math.round (w * scale);
-        int new_h = (int) Math.round (h * scale);
-
-        if (new_w <= 0 || new_h <= 0)
-            return src;
-
-        return src.scale_simple (new_w, new_h, Gdk.InterpType.BILINEAR);
-    }
-
-    // ダウンロードタスクをキューに積む
-    private void enqueue_image_download (string url, Gtk.Picture thumb) {
-        image_download_queue.offer (new ImageDownloadTask (url, thumb));
-        process_image_download_queue ();
-    }
-
-    // キューを処理して、同時実行数の上限まで流す
-    private void process_image_download_queue () {
-        // すでに上限まで動いていたら何もしない
-        while (running_image_downloads < MAX_PARALLEL_IMAGE_DOWNLOADS &&
-               !image_download_queue.is_empty) {
-
-            var task = image_download_queue.poll ();
-            if (task == null)
-                break;
-
-            if (task.thumb == null)
-                continue;
-
-            running_image_downloads++;
-
-            // async 関数を begin して、終わったらカウンタを戻す
-            load_image_thumbnail_async.begin (task.url, task.thumb, false, (obj, res) => {
-                try {
-                    load_image_thumbnail_async.end (res);
-                } catch (Error e) {
-                    // 画像ロード失敗は
-                }
-
-                running_image_downloads--;
-                // 次のタスクを回す
-                process_image_download_queue ();
-            });
-        }
-    }
     // -------- Spanクリック時の動作 --------
 
     private void on_span_left_clicked (ResRow.ResItem post, Span span) {
@@ -1206,7 +954,7 @@ public class RessView : Adw.NavigationPage {
         row_box.append (body);
 
         // 画像サムネイル''
-        var image_urls = find_image_urls_for_post (post);
+        var image_urls = imgcon.find_image_urls_for_post (post);
         if (image_urls.size > 0) {
             var thumbs_box = new Gtk.FlowBox ();
             thumbs_box.orientation = Gtk.Orientation.HORIZONTAL;
@@ -1220,8 +968,8 @@ public class RessView : Adw.NavigationPage {
             foreach (var url in image_urls) {
                 var thumb = new Gtk.Picture ();
                 thumb.content_fit = Gtk.ContentFit.CONTAIN;
-                thumb.width_request = THUMB_WIDTH;
-                thumb.height_request = THUMB_HEIGHT;
+                thumb.width_request = ImageControl.THUMB_WIDTH;
+                thumb.height_request = ImageControl.THUMB_HEIGHT;
                 thumb.can_shrink = false;
 
                 // FlowBoxChild に包んで追加
@@ -1238,12 +986,12 @@ public class RessView : Adw.NavigationPage {
                         Gtk.Widget? w = click.get_widget ();
                         if (w is Gtk.Picture) {
                             var pic = (Gtk.Picture) w;
-                            show_image.begin (get_image_cache_path (url),url, pic);
+                            show_image.begin (imgcon.get_image_cache_path (url),url, pic);
                         }
                     }
                 });
 
-                enqueue_image_download (url, thumb);
+                imgcon.enqueue_image_download (url, thumb);
             }
 
             row_box.append (thumbs_box);
@@ -1253,6 +1001,21 @@ public class RessView : Adw.NavigationPage {
         row.set_child (row_box);
 
         return row;
+    }
+
+    // 画像拡大表示用の簡易ビューアに遷移する
+    private async void show_image (string cache_path, string url, Gtk.Picture thumb) {
+
+        if (!FileUtils.test (cache_path, FileTest.EXISTS)) {
+            imgcon.load_image_thumbnail_async (url, thumb, true);
+            return;
+        }
+        // 次の画面へ遷移
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
+            return;
+        }
+        nav.push(new imageview (url, cache_path));
     }
 
     private async void add (int index) {
