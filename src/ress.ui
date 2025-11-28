@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<!-- Created with Cambalache 0.96.1 -->
+<!-- Created with Cambalache 0.96.3 -->
 <interface>
   <!-- interface-name ress.ui -->
   <requires lib="gio" version="2.0"/>
@@ -99,58 +99,56 @@
         </child>
       </object>
     </child>
-    <child>
-      <menu id="context_menu">
-        <item>
-          <attribute name="action">win.reply</attribute>
-          <attribute name="label" translatable="yes">Reply</attribute>
-        </item>
-        <submenu>
-          <attribute name="label" translatable="yes">Copy</attribute>
-          <item>
-            <attribute name="action">win.copy</attribute>
-            <attribute name="label" translatable="yes">Name</attribute>
-            <attribute name="target">name</attribute>
-          </item>
-          <item>
-            <attribute name="action">win.copy</attribute>
-            <attribute name="label" translatable="yes">ID</attribute>
-            <attribute name="target">ID</attribute>
-          </item>
-          <item>
-            <attribute name="action">win.copy</attribute>
-            <attribute name="label" translatable="yes">Text</attribute>
-            <attribute name="target">text</attribute>
-          </item>
-          <item>
-            <attribute name="action">win.copy</attribute>
-            <attribute name="label" translatable="yes">Header+text</attribute>
-            <attribute name="target">set</attribute>
-          </item>
-          <item>
-            <attribute name="action">win.copy</attribute>
-            <attribute name="label" translatable="yes">URL</attribute>
-            <attribute name="target">url</attribute>
-          </item>
-        </submenu>
-      </menu>
-    </child>
-    <child>
-      <menu id="primary_menu">
-        <section>
-          <attribute name="label" translatable="yes">Copy</attribute>
-          <item>
-            <attribute name="action">win.copy</attribute>
-            <attribute name="label" translatable="yes">URL</attribute>
-            <attribute name="target">thread_url</attribute>
-          </item>
-          <item>
-            <attribute name="action">win.copy</attribute>
-            <attribute name="label" translatable="yes">Subject</attribute>
-            <attribute name="target">subject</attribute>
-          </item>
-        </section>
-      </menu>
-    </child>
   </template>
+
+    <menu id="primary_menu">
+      <section>
+        <attribute name="label" translatable="yes">Copy</attribute>
+        <item>
+          <attribute name="action">win.copy</attribute>
+          <attribute name="label" translatable="yes">URL</attribute>
+          <attribute name="target">thread_url</attribute>
+        </item>
+        <item>
+          <attribute name="action">win.copy</attribute>
+          <attribute name="label" translatable="yes">Subject</attribute>
+          <attribute name="target">subject</attribute>
+        </item>
+      </section>
+    </menu>
+    <menu id="context_menu">
+      <item>
+        <attribute name="action">win.reply</attribute>
+        <attribute name="label" translatable="yes">Reply</attribute>
+      </item>
+      <submenu>
+        <attribute name="label" translatable="yes">Copy</attribute>
+        <item>
+          <attribute name="action">win.copy</attribute>
+          <attribute name="label" translatable="yes">Name</attribute>
+          <attribute name="target">name</attribute>
+        </item>
+        <item>
+          <attribute name="action">win.copy</attribute>
+          <attribute name="label" translatable="yes">ID</attribute>
+          <attribute name="target">ID</attribute>
+        </item>
+        <item>
+          <attribute name="action">win.copy</attribute>
+          <attribute name="label" translatable="yes">Text</attribute>
+          <attribute name="target">text</attribute>
+        </item>
+        <item>
+          <attribute name="action">win.copy</attribute>
+          <attribute name="label" translatable="yes">Header+text</attribute>
+          <attribute name="target">set</attribute>
+        </item>
+        <item>
+          <attribute name="action">win.copy</attribute>
+          <attribute name="label" translatable="yes">URL</attribute>
+          <attribute name="target">url</attribute>
+        </item>
+      </submenu>
+    </menu>
+
 </interface>
