@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.96.3 -->
+<interface>
+  <requires lib="gtk" version="4.18"/>
+  <requires lib="libadwaita" version="1.4"/>
+  <requires lib="webkitgtk" version="6.0"/>
+  <template class="local_rules" parent="AdwNavigationPage">
+    <property name="title" translatable="yes">Local rules</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="AdwHeaderBar" id="header">
+            <property name="show-start-title-buttons">False</property>
+          </object>
+        </child>
+        <child>
+          <object class="WebKitWebView" id="webview">
+            <property name="hexpand">True</property>
+            <property name="vexpand">True</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

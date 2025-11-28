@@ -39,6 +39,8 @@ public class ThreadsView : Adw.NavigationPage {
 
     private GLib.ListStore store = new GLib.ListStore (typeof (ThreadRow.ThreadsItem));
 
+    private SimpleActionGroup page_actions;
+
     [GtkChild]
     unowned Gtk.ListView listview;
 
@@ -116,6 +118,24 @@ public class ThreadsView : Adw.NavigationPage {
 
     construct {
         typeof (ThreadRow).ensure ();
+
+        page_actions = new SimpleActionGroup ();
+
+        var copy_action = new SimpleAction ("copy_thread", VariantType.STRING);
+        copy_action.activate.connect ((param) => {
+            on_copy_activate (param);
+        });
+        page_actions.add_action (copy_action);
+
+        // localrules アクション
+        var localrules_action = new SimpleAction ("local_rules", null);
+        localrules_action.activate.connect ((param) => {
+            on_localrules_activate ();
+        });
+        page_actions.add_action (localrules_action);
+
+        // "win." プレフィックスでこのページに登録
+        this.insert_action_group ("win", page_actions);
 
         // 行がアクティブ化されたとき（pos は行番号）
         listview.activate.connect (on_row_activated);
@@ -217,6 +237,43 @@ public class ThreadsView : Adw.NavigationPage {
             print (e.message);
             win.show_error_toast (e.message);
         }
+    }
+
+    // argで指定されたものをコピー
+    private async void copy (string arg) {
+        StringBuilder sb = new StringBuilder ();
+
+        switch (arg) {
+            case "url":
+                sb.append (url);
+                break;
+            case "name":
+                sb.append (name);
+                break;
+            case "set":
+                sb.append (name).append ("\n");
+                sb.append (url);
+                break;
+            default:
+                return;
+        }
+
+        common.copy_to_clipboard (sb.str);
+        win.show_error_toast (_("Copied."));
+    }
+
+    private void on_copy_activate (Variant? param) {
+        string arg = param.get_string ();
+        copy.begin (arg);
+    }
+
+    private void on_localrules_activate () {
+        // 次の画面へ遷移
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
+            return;
+        }
+        nav.push(new local_rules (url));
     }
 
     [GtkCallback]

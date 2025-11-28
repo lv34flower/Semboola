@@ -66,4 +66,36 @@ namespace common {
         }
     }
 
+    // DBの掃除
+    async void clean_data () {
+        try {
+            Db.DB db = new Db.DB();
+
+            var sql = """
+                WITH to_keep AS (
+                  SELECT rowid
+                  FROM tempwrite
+                  ORDER BY last_touch_date DESC
+                  LIMIT 1000
+                )
+                DELETE FROM tempwrite
+                WHERE rowid NOT IN (SELECT rowid FROM to_keep)
+            """;
+            db.exec (sql, {});
+
+            sql = """
+                WITH to_keep AS (
+                  SELECT rowid
+                  FROM threadlist
+                  ORDER BY last_touch_date DESC
+                  LIMIT 1000
+                )
+                DELETE FROM threadlist
+                WHERE rowid NOT IN (SELECT rowid FROM to_keep)
+            """;
+            db.exec (sql, {});
+
+        } catch {}
+    }
+
 }

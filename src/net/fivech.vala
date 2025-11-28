@@ -93,6 +93,9 @@ namespace FiveCh {
         public string setting_url () {
             return ensure_board_base () + "SETTING.TXT";
         }
+        public string head_url () {
+            return ensure_board_base () + "head.txt";
+        }
         public string dat_url (string threadkey) {
             return ensure_board_base () + "dat/" + threadkey + ".dat";
         }
@@ -243,6 +246,15 @@ namespace FiveCh {
                 }
             }
             return map;
+        }
+
+        // -------------- head.txt --------------
+        public async string fetch_head_async (Board board, Cancellable? cancel = null) throws Error {
+            var url = board.head_url ();
+            var bytes = yield send_get_bytes_async (url, board.user_agent, null, cancel);
+            string __enc_tmp; var text = decode_text_guess_japanese (bytes, out __enc_tmp);
+            //text = decode_html_entities (text);
+            return text;
         }
 
         // -------------- DAT (Range) --------------
@@ -1088,7 +1100,7 @@ namespace FiveCh {
                 var parts = line.split ("<>");
 
                 if (parts.length > 4 && parts[4] != "") {
-                    return parts[4];
+                    return Client.decode_html_entities (parts[4]);
                 }
                 break;
             }

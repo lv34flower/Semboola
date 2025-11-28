@@ -6,6 +6,7 @@ Semboola_sources = [
   'boards.vala',
   'thread_hist.vala',
   'threads.vala',
+  'local_rules.vala',
   'new_thread.vala',
   'thread_row.vala',
   'ress.vala',

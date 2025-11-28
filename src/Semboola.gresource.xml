@@ -7,6 +7,7 @@
     <file preprocess="xml-stripblanks">thread_hist.ui</file>
     <file preprocess="xml-stripblanks">new_thread.ui</file>
     <file preprocess="xml-stripblanks">threads.ui</file>
+    <file preprocess="xml-stripblanks">local_rules.ui</file>
     <file preprocess="xml-stripblanks">thread_row.ui</file>
     <file preprocess="xml-stripblanks">ress.ui</file>
     <file preprocess="xml-stripblanks">replies.ui</file>

@@ -80,7 +80,6 @@ public class new_thread : Adw.ApplicationWindow {
     }
 
     construct {
-
     }
 
     [GtkCallback]
