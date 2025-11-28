@@ -493,6 +493,9 @@ public class RessView : Adw.NavigationPage {
     }
 
     private void on_span_left_clicked (ResRow.ResItem post, Span span) {
+        if (span.type == SpanType.NORMAL) {
+            return;
+        }
 
         span_click.begin (post, span);
         consume_row_click_once ();
