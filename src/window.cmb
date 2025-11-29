@@ -3,8 +3,8 @@
 <!-- Created with Cambalache 0.96.3 -->
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
   <ui template-class="BoardsView" filename="boards.ui" sha256="1be72b9905498bcce56f6a32e9d994747bfaf60ebc3ef4da57faa980c66b4a05"/>
-  <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="9583fdfaac968f5b87d0f6cd01a03e0e5b30d812d9b15648faa0c774992a7d30"/>
-  <ui template-class="ThreadsView" filename="threads.ui" sha256="b95fa7654c759a60cdde98c40a318016a5b78be1ad3f4af5e3769206e7bf005c"/>
+  <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="41350e67ea88ca5b2936f3bcca94f23a1102797f7205a24b969c2ac1089d86df"/>
+  <ui template-class="ThreadsView" filename="threads.ui" sha256="56bdbdaf7c5fd49ebae4f79bf22de3c9138c39bc98b5c6cecf0017c68cf0f1af"/>
   <ui template-class="ThreadRow" filename="thread_row.ui" sha256="5696d61a684cfb71f5540b8260879f70794b8576938ea4be594d4bb00473b25f"/>
   <ui template-class="RessView" filename="ress.ui" sha256="ad764a587bed4064bdffa63e842ff6aa18226f191d5a419e3473456277e3c807"/>
   <ui template-class="new_thread" filename="new_thread.ui" sha256="e49292fff7a877d94f15839002cae62ab53b0a215c3a3da8900298214ffa20b2"/>
@@ -13,8 +13,6 @@
   <ui template-class="thread_hist" filename="thread_hist.ui" sha256="52e41e84ad3967e31ff7cf9b5f537cc327276ea643e6741aff30f25d236f9436"/>
   <ui template-class="replies" filename="replies.ui" sha256="d3df851a2ab96322f1f95dff689043f122e38541c2e8f5d8a550d60e3e7e3411"/>
   <ui template-class="imageview" filename="imageview.ui" sha256="b4abbe26553a0d759e7e12a8b5eed45e25d8efbcc3096890a1d42d05daf88442"/>
-  <ui template-class="SemboolaWindow" filename="window.ui" sha256="40cccb50e3b6a26c4329d6c9735f5e9415e9afef4a4c723e9bc32b8fdc8f03bf">
-    <requires>BoardsView</requires>
-  </ui>
+  <ui template-class="SemboolaWindow" filename="window.ui" sha256="b859744bef755086e5263d8100b2da46d1f2bda74b10e8b5e42aa62c3e6418cb"/>
   <ui template-class="local_rules" filename="local_rules.ui" sha256="e9654b608e431fb04e22a1f44c98847c66a2c7bba67cdea826bc006cb0b16b71"/>
 </cambalache-project>

@@ -60,6 +60,16 @@ public class BoardsView : Adw.NavigationPage {
     // 2行レイアウトのFactory：タイトル（太字＋省略）＋説明（サブ）
     private SignalListItemFactory factory = new SignalListItemFactory ();
 
+    Semboola.Window win;
+
+    public BoardsView () {
+        this.shown.connect (() => {
+            win = this.get_root() as Semboola.Window;
+            common.clean_data.begin ();
+            bbslist.begin ();
+        });
+    }
+
     // 初期化,.
     public override void constructed () {
         base.constructed ();
@@ -68,7 +78,7 @@ public class BoardsView : Adw.NavigationPage {
         bd_button_add.clicked.connect (on_button_add);
         bd_button_hist.clicked.connect (on_button_hist);
 
-        bbslist();
+        bbslist.begin();
 
         var sel = new NoSelection (store);
         bd_list_boards.model = sel;
@@ -82,10 +92,6 @@ public class BoardsView : Adw.NavigationPage {
         });
 
         bd_list_boards.factory = factory;
-
-        this.shown.connect (() => {
-            common.clean_data.begin ();
-        });
     }
 
     construct {
@@ -160,23 +166,11 @@ public class BoardsView : Adw.NavigationPage {
         del.clicked.connect (() => {
             uint pos = li.position;
             if (pos >= 0 && pos < (int) store.get_n_items ()) {
-                try {
-                    Db.DB db = new Db.DB();
-                    Sqlite.Statement st;
-                    string sql = """
-                        DELETE from bbslist where
-                        url = ?1
-                    """;
 
-                    var bi = (BoardsItem) li.item;
-                    var deleteurl = bi.url;
+                var bi = (BoardsItem) li.item;
+                var deleteurl = bi.url;
 
-                    db.exec (sql, {deleteurl});
-                } catch (Error e) {
-                    show_error_toast (e.message);
-                    print(e.message);
-                }
-
+                common.remove_bbs_list (deleteurl, win);
                 bbslist();
             }
 
@@ -202,7 +196,7 @@ public class BoardsView : Adw.NavigationPage {
         var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
         var popup = new AddBoardWindow (window, g_app);
         popup.submitted.connect ((text) => {
-            this.add_bbs_list (text);
+            this.add_bbs_list.begin (text);
         });
         popup.present ();
     }
@@ -216,39 +210,13 @@ public class BoardsView : Adw.NavigationPage {
         nav.push(new thread_hist ());
     }
 
-    // リストに追加
     private async void add_bbs_list (string url) {
-        // URLからタイトルを取得
-        var client = new FiveCh.Client ();
-        string name;
-        try {
-            name = yield client.fetch_board_title_from_url_async (url);
-            if (name == null) {
-                show_error_toast ("Invalid URL");
-                return;
-            }
-        } catch {
-            show_error_toast ("Invalid Error");
+        // 次の画面へ遷移
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
             return;
         }
-
-        // DB更新
-        try {
-            Db.DB db = new Db.DB();
-            string sql = """
-                INSERT INTO bbslist (url, name)
-                VALUES (?1, ?2)
-            """;
-
-            db.exec (sql, {url, name});
-
-        } catch {
-            show_error_toast ("Duplicate URL");
-            return;
-        }
-
-        bbslist();
-
+        common.open_url (url, nav);
     }
 
     // ListStore からアイテムのインデックスを探す簡易ヘルパ
@@ -272,7 +240,7 @@ public class BoardsView : Adw.NavigationPage {
     }
 
     // 掲示板一覧更新
-    private void bbslist () {
+    private async void bbslist () {
         // dbファイル読み込み、保存しているスレッドを取得,
         Db.DB db = new Db.DB();
 
@@ -290,17 +258,5 @@ public class BoardsView : Adw.NavigationPage {
                 n.url
             ));
         }
-    }
-
-    // エラー表示
-    public void show_error_toast (string message) {
-        var toast = this.get_ancestor (typeof (Adw.ToastOverlay)) as Adw.ToastOverlay;
-        if (toast == null) {
-            return;
-        }
-        var t = new Adw.Toast (message);
-        t.set_timeout (5); // 秒
-
-        toast.add_toast (t);
     }
 }

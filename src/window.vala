@@ -49,10 +49,15 @@ public class Semboola.Window : Adw.ApplicationWindow {
         typeof (BoardsView).ensure ();
     }
 
+    protected override void constructed () {
+        base.constructed();
+        nav.push (new BoardsView ());
+    }
+
     // エラー表示
     public void show_error_toast (string message) {
         var t = new Adw.Toast (message);
-        t.set_timeout (5); // 秒
+        t.set_timeout (3); // 秒
 
         // 重要度を上げたいなら（キューで優先されます）
         t.set_priority (Adw.ToastPriority.HIGH);

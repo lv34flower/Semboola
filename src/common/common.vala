@@ -56,11 +56,11 @@ namespace common {
                 } else {
                 }
 
-                last = end;
-                mi.next ();
+                throw new IOError.FAILED("");//無意味error
             }
         } catch {
             // 普通に開く
+            message (url);
             var launcher = new Gtk.UriLauncher (url);
             launcher.launch.begin (null, null);
         }
@@ -96,6 +96,55 @@ namespace common {
             db.exec (sql, {});
 
         } catch {}
+    }
+
+    // 板をリストに追加
+    async void add_bbs_list (string url, Semboola.Window win) {
+        // URLからタイトルを取得
+        var client = new FiveCh.Client ();
+        string name;
+        try {
+            name = yield client.fetch_board_title_from_url_async (url);
+            if (name == null) {
+                win.show_error_toast ("Invalid URL");
+                return;
+            }
+        } catch {
+            win.show_error_toast ("Invalid Error");
+            return;
+        }
+
+        // DB更新
+        try {
+            Db.DB db = new Db.DB();
+            string sql = """
+                INSERT INTO bbslist (url, name)
+                VALUES (?1, ?2)
+            """;
+
+            db.exec (sql, {url, name});
+
+        } catch {
+            win.show_error_toast ("Duplicate URL");
+            return;
+        }
+
+    }
+
+    // 板を削除
+    async void remove_bbs_list (string url, Semboola.Window win) {
+        try {
+            Db.DB db = new Db.DB();
+            Sqlite.Statement st;
+            string sql = """
+                DELETE from bbslist where
+                url = ?1
+            """;
+
+            db.exec (sql, {url});
+        } catch (Error e) {
+            win.show_error_toast (e.message);
+        }
     }
 
 }

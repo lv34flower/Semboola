@@ -40,6 +40,7 @@ public class ThreadsView : Adw.NavigationPage {
     private GLib.ListStore store = new GLib.ListStore (typeof (ThreadRow.ThreadsItem));
 
     private SimpleActionGroup page_actions;
+    private SimpleAction bookmark_board_action;
 
     [GtkChild]
     unowned Gtk.ListView listview;
@@ -134,6 +135,16 @@ public class ThreadsView : Adw.NavigationPage {
         });
         page_actions.add_action (localrules_action);
 
+        // bookmark_board アクション
+        bookmark_board_action = new SimpleAction.stateful ("bookmark_board", null, new Variant.boolean (false));
+        bookmark_board_action.activate.connect ((param) => {
+        bool current = bookmark_board_action.state.get_boolean ();
+        bookmark_board_action.set_state (new Variant.boolean (!current));
+
+        on_bookmark_board_activate (!current);
+        });
+        page_actions.add_action (bookmark_board_action);
+
         // "win." プレフィックスでこのページに登録
         this.insert_action_group ("win", page_actions);
 
@@ -143,9 +154,13 @@ public class ThreadsView : Adw.NavigationPage {
 
     // 最初の読み込み
     private async void init_load () {
+        // bookmark更新
+        reload_bookmark();
+
         if (initialized) {
             return;
         }
+
 
         yield reload();
         initialized = true;
@@ -155,6 +170,24 @@ public class ThreadsView : Adw.NavigationPage {
     private async void all_reload () {
         yield reload();
         yield load_threadlist (); // 未読更新
+    }
+
+    // bookmark状態の確認
+    private async void reload_bookmark() {
+        Db.DB db = new Db.DB();
+
+        var rows = db.query ("""
+            SELECT 1
+              FROM bbslist
+             WHERE url = ?1
+             ORDER BY name asc
+        """, {url});
+
+        if (rows.is_empty) {
+            bookmark_board_action.set_state (new Variant.boolean (false));
+        } else {
+            bookmark_board_action.set_state (new Variant.boolean (true));
+        }
     }
 
     // スレ一覧更新(非同期で呼ぶこと)
@@ -265,6 +298,15 @@ public class ThreadsView : Adw.NavigationPage {
     private void on_copy_activate (Variant? param) {
         string arg = param.get_string ();
         copy.begin (arg);
+    }
+
+    private void on_bookmark_board_activate (bool bm)
+    {
+        if (bm) {
+            common.add_bbs_list.begin (url, win);
+        } else {
+            common.remove_bbs_list.begin (url, win);
+        }
     }
 
     private void on_localrules_activate () {

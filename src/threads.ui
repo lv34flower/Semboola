@@ -67,6 +67,10 @@
   </template>
   <menu id="threads_menu">
     <item>
+      <attribute name="action">win.bookmark_board</attribute>
+      <attribute name="label">Bookmark</attribute>
+    </item>
+    <item>
       <attribute name="action">win.local_rules</attribute>
       <attribute name="label" translatable="yes">Local rules</attribute>
     </item>
