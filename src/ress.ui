@@ -98,6 +98,10 @@
     </child>
   </template>
   <menu id="primary_menu">
+    <item>
+      <attribute name="action">win.thread_top</attribute>
+      <attribute name="label" translatable="yes">Top</attribute>
+    </item>
     <section>
       <attribute name="label" translatable="yes">Copy</attribute>
       <item>

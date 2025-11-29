@@ -24,7 +24,6 @@ using Gdk;
 using Adw;
 using FiveCh;
 using Soup;
-//using Gdk.Pixbuf;
 
 [GtkTemplate (ui = "/jp/lv34/Semboola/ress.ui")]
 public class RessView : Adw.NavigationPage {
@@ -108,6 +107,12 @@ public class RessView : Adw.NavigationPage {
 
     construct {
         page_actions = new SimpleActionGroup ();
+
+        var top_action = new SimpleAction ("thread_top", null);
+        top_action.activate.connect ((param) => {
+            on_top_activate ();
+        });
+        page_actions.add_action (top_action);
 
         var copy_action = new SimpleAction ("copy", VariantType.STRING);
         copy_action.activate.connect ((param) => {
@@ -369,6 +374,7 @@ public class RessView : Adw.NavigationPage {
 
 
     private int last_post_count = 0;
+    private int old_count;
     private async void reload () {
 
         this.title=_("Loading...");
@@ -380,11 +386,14 @@ public class RessView : Adw.NavigationPage {
             var new_posts = yield loader.load_from_url_async (url, cancellable);
             name = loader.get_title ();
 
-            int old_count = (posts != null) ? posts.size : 0;
+            old_count = (posts != null) ? posts.size : 0;
             int new_count = new_posts.size;
 
             // モデル差し替え
             posts = new_posts;
+
+            // 自分の書き込み
+            mark_posthist ();
 
             // アンカー索引
             build_anchor_index ();
@@ -1008,7 +1017,83 @@ public class RessView : Adw.NavigationPage {
         var row = new Gtk.ListBoxRow ();
         row.set_child (row_box);
 
+        // 書き込みマーク
+        switch (post.mark) {
+            case post.MarkType.MINE:
+                row.add_css_class ("row-mine");
+                break;
+            case post.MarkType.REPLY:
+                row.add_css_class ("row-reply");
+                break;
+        }
+
         return row;
+    }
+
+    // 書き込み履歴を検査する
+    private void mark_posthist () {
+        string? board_key = FiveCh.Board.guess_board_key_from_url (url);
+        string? site_base = FiveCh.Board.guess_site_base_from_url (url);
+        string? threadkey = FiveCh.DatLoader.guess_threadkey_from_url (url);
+
+        // check_status = 0のデータを探し、DBを更新する
+        try {
+            Db.DB db = new Db.DB();
+
+            var rows = db.query ("""
+                SELECT *, rowid
+                  FROM posthist
+                 WHERE board_url = ?1
+                   AND bbs_id = ?2
+                   AND thread_id = ?3
+                   AND check_status = 0
+                 ORDER BY last_touch_date desc
+            """, {site_base, board_key, threadkey});
+            foreach (var r in rows) {
+                for (int i = posts.size-1; i >= old_count; --i) {
+                    print(posts[i].body);
+                    if (posts[i].body != r["text"]) {
+                        continue;
+                    }
+
+                    // マークということにする
+                    var sql = """
+                            UPDATE posthist
+                               SET post_index = ?1,
+                                   check_status = 1
+                             WHERE rowid = ?2
+                    """;
+                    db.exec (sql, {(i+1).to_string (), r["rowid"]});
+                    break;
+                }
+            }
+
+        } catch (Error e) {
+            win.show_error_toast (e.message);
+        }
+
+        // マークされていたらそのステータスを持つ
+        try {
+            Db.DB db = new Db.DB();
+
+            var rows = db.query ("""
+                SELECT *, rowid
+                  FROM posthist
+                 WHERE board_url = ?1
+                   AND bbs_id = ?2
+                   AND thread_id = ?3
+                   AND check_status = 1
+                 ORDER BY post_index asc
+            """, {site_base, board_key, threadkey});
+            foreach (var r in rows) {
+                var p = posts[int.parse (r["post_index"]) - 1];
+                p.mark = ResRow.ResItem.MarkType.MINE;
+            }
+
+        } catch (Error e) {
+            win.show_error_toast (e.message);
+        }
+
     }
 
     // 画像拡大表示用の簡易ビューアに遷移する
@@ -1129,6 +1214,17 @@ public class RessView : Adw.NavigationPage {
     [GtkCallback]
     private void on_down_click () {
         go_down.begin ();
+    }
+
+    private void on_top_activate () {
+
+        string? board_key = FiveCh.Board.guess_board_key_from_url (url);
+        string? site_base = FiveCh.Board.guess_site_base_from_url (url);
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
+            return;
+        }
+        common.open_url (site_base + board_key + "/", nav);
     }
 
     private void on_reply_activate () {

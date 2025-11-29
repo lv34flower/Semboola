@@ -158,6 +158,15 @@ public class new_res : Adw.ApplicationWindow {
                     """;
 
                     db.exec (sql, {board.site_base_url, board.board_key, FiveCh.DatLoader.guess_threadkey_from_url (url)});
+
+                    // 書き込んだテキストを保管し、自分の書き込みをマークできるようにする
+                    sql = """
+                        INSERT INTO posthist (board_url, bbs_id, thread_id, check_status, text, last_touch_date)
+                        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                    """;
+                    db.exec (sql, {board.site_base_url, board.board_key, FiveCh.DatLoader.guess_threadkey_from_url (url), "0", textbuffer.text, new DateTime.now_utc ().to_unix ().to_string ()});
+
+
                 } catch (Error e) {
                     win.show_error_toast (e.message);
                     print(e.message);

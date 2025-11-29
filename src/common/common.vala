@@ -95,6 +95,18 @@ namespace common {
             """;
             db.exec (sql, {});
 
+            sql = """
+                WITH to_keep AS (
+                  SELECT rowid
+                  FROM posthist
+                  ORDER BY last_touch_date DESC
+                  LIMIT 1000
+                )
+                DELETE FROM posthist
+                WHERE rowid NOT IN (SELECT rowid FROM to_keep)
+            """;
+            db.exec (sql, {});
+
         } catch {}
     }
 

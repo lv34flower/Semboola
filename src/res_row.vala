@@ -28,6 +28,13 @@ public class ResRow : Gtk.Box {
         public string date { get; construct; }
         public string id { get; construct; }
         public string body { get; construct; }
+        public int mark { get; set; default=MarkType.NONE; }
+
+        public enum MarkType {
+            NONE,
+            MINE,
+            REPLY,
+        }
 
         public ResItem(uint index,
                        string name,
