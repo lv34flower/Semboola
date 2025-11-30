@@ -26,6 +26,12 @@ using FiveCh;
 
 [GtkTemplate (ui = "/jp/lv34/Semboola/replies.ui")]
 public class replies : Adw.NavigationPage {
+    public enum Type {
+        NONE,
+        ID,
+        REPLIES
+    }
+
     private string name;
 
     Semboola.Window win;
@@ -61,5 +67,9 @@ public class replies : Adw.NavigationPage {
 
     private async void init_load () {
 
+    }
+
+    public void set_listbox (Gtk.ListBox c) {
+        listwindow.set_child (c);
     }
 }

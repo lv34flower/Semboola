@@ -72,8 +72,16 @@ public class RessView : Adw.NavigationPage {
 
     // 直近で右クリックした行のindex
     private uint right_clicked_row = 1;
-    // 右クリックが行われたとき、画面に映っているインデックスの並び(1スタート)
-    private Gee.ArrayList<uint> right_clicked_indexes = new Gee.ArrayList<uint> ();
+    // クリックが行われたとき、画面に映っているインデックスの並び(1スタート)
+    private Gee.ArrayList<uint> clicked_indexes = new Gee.ArrayList<uint> ();
+
+    // repliesのインスタンス
+    private replies replies_view;
+    // repliesがどのモードで開いているか
+    private replies.Type rep_type = replies.Type.NONE;
+    // repliesのroot_index
+    private uint rep_root_index = 0;
+    private string rep_id = "";
 
     [GtkChild]
     unowned Gtk.ListBox listview;
@@ -99,7 +107,7 @@ public class RessView : Adw.NavigationPage {
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
         this.shown.connect (() => {
             win = this.get_root () as Semboola.Window;
-            right_clicked_indexes.clear (); // 並び=通常
+            clicked_indexes.clear (); // 並び=通常
             init_load.begin ();
         });
     }
@@ -167,6 +175,13 @@ public class RessView : Adw.NavigationPage {
             if (idx < 0 || idx >= posts.size)
                 return;
 
+            if (clicked_indexes.is_empty) {
+                // idx = idx;
+            } else {
+                idx = (int) clicked_indexes[idx]-1;
+            }
+
+
             var post = posts[idx];
 
             switch (button) {
@@ -196,6 +211,12 @@ public class RessView : Adw.NavigationPage {
             int idx = row.get_index ();
             if (idx < 0 || idx >= posts.size)
                 return;
+
+            if (clicked_indexes.is_empty) {
+                // idx = idx;
+            } else {
+                idx = (int) clicked_indexes[idx]-1;
+            }
 
             var post = posts[idx];
 
@@ -302,9 +323,11 @@ public class RessView : Adw.NavigationPage {
         // 書き込みマーク
         switch (post.mark) {
         case post.MarkType.MINE :
+            row.remove_css_class ("row-reply");
             row.add_css_class ("row-mine");
             break;
         case post.MarkType.REPLY :
+            row.remove_css_class ("row-mine");
             row.add_css_class ("row-reply");
             break;
         default:
@@ -753,26 +776,34 @@ public class RessView : Adw.NavigationPage {
     }
 
     private void open_id_page (string id) {
+        var pop = !clicked_indexes.is_empty;
+        rep_id = id;
+
         // ツリー用 ListBox を作成
         var id_list = create_id_listbox (id);
 
         if (id_list == null)
             return;
 
-        setup_listbox_clicks (id_list);
-
         // 次の画面へ遷移
         var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
         if (nav == null) {
             return;
         }
-        nav.push (new replies (name, id_list));
+        if (pop) {
+            nav.pop ();
+        }
+
+        replies_view = new replies (name, id_list);
+        rep_type = replies.Type.ID;
+        nav.push (replies_view);
     }
 
+    Gtk.ListBox id_list;
     public Gtk.ListBox create_id_listbox (string id) {
-        right_clicked_indexes.clear ();
+        clicked_indexes.clear ();
 
-        var id_list = new Gtk.ListBox ();
+        id_list = new Gtk.ListBox ();
         id_list.show_separators = true;
         id_list.selection_mode = Gtk.SelectionMode.NONE;
 
@@ -783,30 +814,42 @@ public class RessView : Adw.NavigationPage {
             id_list.append (row);
 
             // 並びを保存
-            right_clicked_indexes.add (idx);
+            clicked_indexes.add (idx);
+
+            refresh_mark(p, row);
         }
+
+        setup_listbox_clicks (id_list);
         return id_list;
     }
 
     private void open_reply_tree_page (uint root_index) {
+        var pop = !clicked_indexes.is_empty;
+        rep_root_index = root_index;
+
         // ツリー用 ListBox を作成
         var tree_list = create_reply_tree_listbox (root_index);
 
         if (tree_list == null)
             return;
 
-        setup_listbox_clicks (tree_list);
-
         // 次の画面へ遷移
         var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
         if (nav == null) {
             return;
         }
-        nav.push (new replies (name, tree_list));
+        if (pop) {
+            nav.pop ();
+        }
+
+        replies_view = new replies (name, tree_list);
+        rep_type = replies.Type.REPLIES;
+        nav.push (replies_view);
     }
 
+    Gtk.ListBox tree_list;
     public Gtk.ListBox create_reply_tree_listbox (uint start_idx) {
-        right_clicked_indexes.clear ();
+        clicked_indexes.clear ();
         uint root = find_conversation_root (start_idx);
 
         Gee.ArrayList<uint> order;
@@ -815,7 +858,7 @@ public class RessView : Adw.NavigationPage {
 
         build_reply_tree_indices (root, out order, out depths, out parent);
 
-        var tree_list = new Gtk.ListBox ();
+        tree_list = new Gtk.ListBox ();
         tree_list.show_separators = true;
         tree_list.selection_mode = Gtk.SelectionMode.NONE;
 
@@ -834,8 +877,12 @@ public class RessView : Adw.NavigationPage {
             tree_list.append (row);
 
             // 並びを保存
-            right_clicked_indexes.add (idx);
+            clicked_indexes.add (idx);
+
+            refresh_mark(post, row);
         }
+
+        setup_listbox_clicks (tree_list);
 
         return tree_list;
     }
@@ -971,6 +1018,12 @@ public class RessView : Adw.NavigationPage {
             if (idx < 0 || idx >= posts.size)
                 return;
 
+            if (clicked_indexes.is_empty) {
+                // idx = idx;
+            } else {
+                idx = (int) clicked_indexes[idx]-1;
+            }
+
             var p = posts[idx];
 
             on_header_clicked (p, idx, n_press);
@@ -1045,6 +1098,11 @@ public class RessView : Adw.NavigationPage {
         string? site_base = FiveCh.Board.guess_site_base_from_url (url);
         string? threadkey = FiveCh.DatLoader.guess_threadkey_from_url (url);
 
+        // リセット
+        foreach (var p in posts) {
+            p.mark = p.MarkType.NONE;
+        }
+
         // check_status = 0のデータを探し、DBを更新する
         try {
             Db.DB db = new Db.DB ();
@@ -1096,6 +1154,14 @@ public class RessView : Adw.NavigationPage {
             foreach (var r in rows) {
                 var p = posts[int.parse (r["post_index"]) - 1];
                 p.mark = ResRow.ResItem.MarkType.MINE;
+
+                // これに対してのレスもマーク
+                var reps = replied_from[int.parse (r["post_index"])];
+                foreach (var rep in reps) {
+                    var rp = posts[(int) rep-1];
+                    if (rp.mark == ResRow.ResItem.MarkType.NONE)
+                        rp.mark = ResRow.ResItem.MarkType.REPLY;
+                }
             }
         } catch (Error e) {
             win.show_error_toast (e.message);
@@ -1132,10 +1198,10 @@ public class RessView : Adw.NavigationPage {
         StringBuilder sb = new StringBuilder ();
 
         int r;
-        if (right_clicked_indexes.is_empty) {
+        if (clicked_indexes.is_empty) {
             r = (int) right_clicked_row;
         } else {
-            r = (int) right_clicked_indexes[(int) right_clicked_row - 1];
+            r = (int) clicked_indexes[(int) right_clicked_row - 1];
         }
 
         var p = posts[r - 1];
@@ -1236,10 +1302,10 @@ public class RessView : Adw.NavigationPage {
 
     private void on_reply_activate () {
         int r;
-        if (right_clicked_indexes.is_empty) {
+        if (clicked_indexes.is_empty) {
             r = (int) right_clicked_row;
         } else {
-            r = (int) right_clicked_indexes[(int) right_clicked_row - 1];
+            r = (int) clicked_indexes[(int) right_clicked_row - 1];
         }
         add.begin (r);
     }
@@ -1254,12 +1320,7 @@ public class RessView : Adw.NavigationPage {
         string? site_base = FiveCh.Board.guess_site_base_from_url (url);
         string? threadkey = FiveCh.DatLoader.guess_threadkey_from_url (url);
 
-        int r;
-        if (right_clicked_indexes.is_empty) {
-            r = (int) right_clicked_row;
-        } else {
-            r = (int) right_clicked_indexes[(int) right_clicked_row - 1];
-        }
+        int r = (int) right_clicked_row;
 
         var p = posts[r - 1];
 
@@ -1294,5 +1355,14 @@ public class RessView : Adw.NavigationPage {
         }
 
         yield reload (true);
+
+        switch (rep_type) {
+            case replies.Type.ID:
+                replies_view.set_listbox (create_id_listbox (rep_id));
+                break;
+            case replies.Type.REPLIES:
+                replies_view.set_listbox (create_reply_tree_listbox (rep_root_index));
+                break;
+        }
     }
 }
