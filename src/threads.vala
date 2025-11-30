@@ -390,6 +390,6 @@ public class ThreadsView : Adw.NavigationPage {
 
     [GtkCallback]
     private void on_search_toggle () {
-        search.begin ("");
+        //search.begin ("");
     }
 }

@@ -29,7 +29,8 @@ public class replies : Adw.NavigationPage {
     public enum Type {
         NONE,
         ID,
-        REPLIES
+        REPLIES,
+        SEARCH,
     }
 
     private string name;
