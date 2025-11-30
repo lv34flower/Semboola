@@ -6,7 +6,7 @@
   <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="41350e67ea88ca5b2936f3bcca94f23a1102797f7205a24b969c2ac1089d86df"/>
   <ui template-class="ThreadsView" filename="threads.ui" sha256="22629bb1c83fcc45151f54886b92238be8228b3e621fef7e281d49d9c549c33f"/>
   <ui template-class="ThreadRow" filename="thread_row.ui" sha256="5696d61a684cfb71f5540b8260879f70794b8576938ea4be594d4bb00473b25f"/>
-  <ui template-class="RessView" filename="ress.ui" sha256="b11b9519af50ff22f2b3f669cfdea9314b478125da25a97af018018cb27a3e9e"/>
+  <ui template-class="RessView" filename="ress.ui" sha256="d0036a483441238528a0e459b8c8f874eff3e7f14e3ecaaadb82a11b1b23ff55"/>
   <ui template-class="new_thread" filename="new_thread.ui" sha256="e49292fff7a877d94f15839002cae62ab53b0a215c3a3da8900298214ffa20b2"/>
   <ui template-class="cookie_confirm" filename="cookie_confirm.ui" sha256="9e4fa0165941f9438fc11f8aedb99621fae27647bfb06f35240df4039c553fa4"/>
   <ui template-class="new_res" filename="new_res.ui" sha256="fe54770e55f43dcc9d11bfa2b19f542967a89c471fb8bf6570369121465d1368"/>

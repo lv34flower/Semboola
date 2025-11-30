@@ -32,6 +32,25 @@
                 <property name="tooltip-text" translatable="yes">Main Menu</property>
               </object>
             </child>
+            <child type="end">
+              <object class="GtkToggleButton" id="button_search">
+                <property name="has-frame">False</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">system-search-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkSearchBar" id="bar_search">
+            <child>
+              <object class="GtkSearchEntry" id="entry_search">
+                <signal name="activate" handler="on_search"/>
+              </object>
+            </child>
           </object>
         </child>
         <child>

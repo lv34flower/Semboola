@@ -92,6 +92,15 @@ public class RessView : Adw.NavigationPage {
     [GtkChild]
     unowned Gtk.PopoverMenu context_popover;
 
+    [GtkChild]
+    unowned Gtk.ToggleButton button_search;
+
+    [GtkChild]
+    unowned Gtk.SearchBar bar_search;
+
+    [GtkChild]
+    unowned Gtk.SearchEntry entry_search;
+
     private SimpleActionGroup page_actions;
 
     public RessView (string url, string name, int read) {
@@ -99,6 +108,12 @@ public class RessView : Adw.NavigationPage {
         this.url = url;
         this.name = name;
         this.read = read;
+
+        button_search.bind_property (
+            "active",
+            bar_search, "search-mode-enabled",
+            BindingFlags.BIDIRECTIONAL
+        );
 
         loader = new DatLoader ();
 
@@ -777,6 +792,54 @@ public class RessView : Adw.NavigationPage {
         });
     }
 
+    private void open_search_page (string target) {
+        var pop = !clicked_indexes.is_empty;
+
+        // ツリー用 ListBox を作成
+        var search_list = create_search_listbox (target);
+
+        if (search_list == null)
+            return;
+
+        // 次の画面へ遷移
+        var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
+        if (nav == null) {
+            return;
+        }
+        if (pop) {
+            nav.pop ();
+        }
+
+        replies_view = new replies (name, search_list);
+        rep_type = replies.Type.SEARCH;
+        nav.push (replies_view);
+    }
+
+    Gtk.ListBox search_list;
+    public Gtk.ListBox create_search_listbox (string target) {
+        clicked_indexes.clear ();
+
+        search_list = new Gtk.ListBox ();
+        search_list.show_separators = true;
+        search_list.selection_mode = Gtk.SelectionMode.NONE;
+
+        foreach (var p in posts) {
+            if (!p.body.contains (target))
+                continue;
+
+            var row = build_row_for_post (p);
+            search_list.append (row);
+
+            // 並びを保存
+            clicked_indexes.add (p.index);
+
+            refresh_mark(p, row);
+        }
+
+        setup_listbox_clicks (search_list);
+        return search_list;
+    }
+
     private void open_id_page (string id) {
         var pop = !clicked_indexes.is_empty;
         rep_id = id;
@@ -1271,6 +1334,10 @@ public class RessView : Adw.NavigationPage {
         }
     }
 
+    private async void search (string target) {
+        open_search_page (entry_search.text);
+    }
+
     [GtkCallback]
     private void on_add_click () {
         add.begin (-1);
@@ -1289,6 +1356,13 @@ public class RessView : Adw.NavigationPage {
     [GtkCallback]
     private void on_down_click () {
         go_down.begin ();
+    }
+
+    [GtkCallback]
+    private void on_search () {
+        if (entry_search.text == "")
+            return;
+        search.begin (entry_search.text);
     }
 
     private void on_top_activate () {
