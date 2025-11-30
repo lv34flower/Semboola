@@ -88,7 +88,7 @@ namespace common {
                   SELECT rowid
                   FROM threadlist
                   ORDER BY last_touch_date DESC
-                  LIMIT 1000
+                  LIMIT 200
                 )
                 DELETE FROM threadlist
                 WHERE rowid NOT IN (SELECT rowid FROM to_keep)

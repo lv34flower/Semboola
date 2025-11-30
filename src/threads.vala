@@ -38,12 +38,24 @@ public class ThreadsView : Adw.NavigationPage {
     private bool initialized = false;
 
     private GLib.ListStore store = new GLib.ListStore (typeof (ThreadRow.ThreadsItem));
+    private GLib.ListStore store_all = new GLib.ListStore (typeof (ThreadRow.ThreadsItem));
 
     private SimpleActionGroup page_actions;
     private SimpleAction bookmark_board_action;
 
     [GtkChild]
     unowned Gtk.ListView listview;
+
+    [GtkChild]
+    unowned Gtk.ToggleButton button_search;
+
+    [GtkChild]
+    unowned Gtk.SearchBar bar_search;
+
+    [GtkChild]
+    unowned Gtk.SearchEntry entry_search;
+
+
 
     public ThreadsView (string url, string name) {
         // Object(
@@ -52,6 +64,12 @@ public class ThreadsView : Adw.NavigationPage {
         //
         this.url = url;
         this.name = name;
+
+        button_search.bind_property (
+            "active",
+            bar_search, "search-mode-enabled",
+            BindingFlags.BIDIRECTIONAL
+        );
 
         var model = new Gtk.NoSelection (store);
 
@@ -156,20 +174,22 @@ public class ThreadsView : Adw.NavigationPage {
     private async void init_load () {
         // bookmark更新
         reload_bookmark();
-
         if (initialized) {
             return;
         }
 
 
         yield reload();
+
         initialized = true;
         yield load_threadlist (); // 未読更新
+        copy_store ();
     }
 
     private async void all_reload () {
         yield reload();
         yield load_threadlist (); // 未読更新
+        copy_store ();
     }
 
     // bookmark状態の確認
@@ -200,9 +220,9 @@ public class ThreadsView : Adw.NavigationPage {
             var list = yield client.fetch_subject_async(board);  // 非同期
 
             if (list.length() > 0) {
-                store.remove_all ();
+                store_all.remove_all ();
                 foreach (var r in list) {
-                    store.append (new ThreadRow.ThreadsItem (
+                    store_all.append (new ThreadRow.ThreadsItem (
                         r.title,
                         r.creation_datetime_local (),
                         r.ikioi_per_hour_now (),
@@ -245,8 +265,8 @@ public class ThreadsView : Adw.NavigationPage {
                 index[id] = map;
             }
 
-            for (uint i = 0; i < store.get_n_items (); ++i) {
-                var obj  = store.get_item (i);
+            for (uint i = 0; i < store_all.get_n_items (); ++i) {
+                var obj  = store_all.get_item (i);
                 var item = obj as ThreadRow.ThreadsItem;
                 HashMap<string, string>? extra = index.get (item.thread_id);
 
@@ -269,6 +289,22 @@ public class ThreadsView : Adw.NavigationPage {
         } catch (Error e) {
             print (e.message);
             win.show_error_toast (e.message);
+        }
+    }
+
+    private void copy_store () {
+        store.remove_all ();
+        for (uint i = 0; i < store_all.get_n_items (); ++i) {
+            store.append (store_all.get_item (i));
+        }
+    }
+
+    private async void search (string target) {
+        store.remove_all ();
+        for (uint i = 0; i < store_all.get_n_items (); ++i) {
+            var item = store_all.get_item (i) as ThreadRow.ThreadsItem;
+            if (item.title.contains (target))
+                store.append (store_all.get_item (i));
         }
     }
 
@@ -318,6 +354,7 @@ public class ThreadsView : Adw.NavigationPage {
         nav.push(new local_rules (url));
     }
 
+
     [GtkCallback]
     private void on_reload_click () {
         all_reload.begin ();
@@ -344,5 +381,15 @@ public class ThreadsView : Adw.NavigationPage {
             this.all_reload.begin ();
         });
         popup.present ();
+    }
+
+    [GtkCallback]
+    private void on_search () {
+        search.begin (entry_search.text);
+    }
+
+    [GtkCallback]
+    private void on_search_toggle () {
+        search.begin ("");
     }
 }
