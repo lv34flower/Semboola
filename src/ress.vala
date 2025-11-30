@@ -108,6 +108,7 @@ public class RessView : Adw.NavigationPage {
         this.shown.connect (() => {
             win = this.get_root () as Semboola.Window;
             clicked_indexes.clear (); // 並び=通常
+            rep_type = replies.Type.NONE;
             init_load.begin ();
         });
     }
@@ -178,6 +179,7 @@ public class RessView : Adw.NavigationPage {
             if (clicked_indexes.is_empty) {
                 // idx = idx;
             } else {
+                print (clicked_indexes.size.to_string ());
                 idx = (int) clicked_indexes[idx]-1;
             }
 
@@ -1355,6 +1357,9 @@ public class RessView : Adw.NavigationPage {
         }
 
         yield reload (true);
+
+        if (replies_view == null) return;
+
 
         switch (rep_type) {
             case replies.Type.ID:
