@@ -149,5 +149,9 @@
         <attribute name="target">url</attribute>
       </item>
     </submenu>
+    <item>
+      <attribute name="action">win.mark</attribute>
+      <attribute name="label" translatable="yes">Mark</attribute>
+    </item>
   </menu>
 </interface>

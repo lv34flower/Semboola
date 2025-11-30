@@ -39,7 +39,7 @@ public class RessView : Adw.NavigationPage {
 
     private ImageControl imgcon = new ImageControl ();
 
-    //private GLib.ListStore store = new GLib.ListStore (typeof (ResRow.ResItem));
+    // private GLib.ListStore store = new GLib.ListStore (typeof (ResRow.ResItem));
     private Gee.ArrayList<ResRow.ResItem> posts;
 
     // from: レス i が、どのレスにアンカーしているか   (i -> targets)
@@ -51,18 +51,18 @@ public class RessView : Adw.NavigationPage {
     // ID このIDが何レスしているか
     private class IdStats : Object {
         public string id   { get; construct; }
-        public uint   nth  { get; construct; } // このIDの何番目のレスか
-        public uint   total{ get; construct; } // このIDが全部で何レスか
+        public uint nth  { get; construct; } // このIDの何番目のレスか
+        public uint total { get; construct; } // このIDが全部で何レスか
 
         public IdStats (string id, uint nth, uint total) {
             Object (id: id, nth: nth, total: total);
         }
     }
     // ID -> そのIDのレスindex一覧（1-based ResItem.index）
-    private Gee.HashMap<string,Gee.ArrayList<uint>> id_to_indices;
+    private Gee.HashMap<string, Gee.ArrayList<uint>> id_to_indices;
 
     // index(1-based) -> そのレスの x/x 情報
-    private Gee.HashMap<uint,IdStats> index_to_id_stats;
+    private Gee.HashMap<uint, IdStats> index_to_id_stats;
 
     // 初期化フラグ
     private bool initialized = false;
@@ -98,11 +98,10 @@ public class RessView : Adw.NavigationPage {
 
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
         this.shown.connect (() => {
-            win = this.get_root() as Semboola.Window;
+            win = this.get_root () as Semboola.Window;
             right_clicked_indexes.clear (); // 並び=通常
             init_load.begin ();
         });
-
     }
 
     construct {
@@ -126,6 +125,13 @@ public class RessView : Adw.NavigationPage {
             on_reply_activate ();
         });
         page_actions.add_action (reply_action);
+
+        // mark アクション
+        var mark_action = new SimpleAction ("mark", null);
+        mark_action.activate.connect ((param) => {
+            on_mark_activate.begin ();
+        });
+        page_actions.add_action (mark_action);
 
         // "win." プレフィックスでこのページに登録
         this.insert_action_group ("win", page_actions);
@@ -164,12 +170,12 @@ public class RessView : Adw.NavigationPage {
             var post = posts[idx];
 
             switch (button) {
-            case Gdk.BUTTON_PRIMARY:
-                on_row_left_clicked (post, idx, n_press);
-                break;
-            case Gdk.BUTTON_SECONDARY:
-                on_row_right_clicked (click.widget as Gtk.ListBox, row, post, idx, x, y);
-                break;
+                case Gdk.BUTTON_PRIMARY:
+                    on_row_left_clicked (post, idx, n_press);
+                    break;
+                case Gdk.BUTTON_SECONDARY:
+                    on_row_right_clicked (click.widget as Gtk.ListBox, row, post, idx, x, y);
+                    break;
             }
         });
 
@@ -200,12 +206,11 @@ public class RessView : Adw.NavigationPage {
         box.add_controller (longp);
     }
 
-
     // ヘッダをクリック
     private void on_header_clicked (ResRow.ResItem post, int row_index, int n_press) {
         if (post.id == null || post.id == "")
             return;
-        open_id_page(post.id);
+        open_id_page (post.id);
     }
 
     // 左クリック
@@ -219,17 +224,18 @@ public class RessView : Adw.NavigationPage {
     }
 
     // 右クリック
-    private void on_row_right_clicked (Gtk.ListBox listbox, ListBoxRow row ,ResRow.ResItem post, int row_index, double x, double y) {
+    private void on_row_right_clicked (Gtk.ListBox listbox, ListBoxRow row, ResRow.ResItem post, int row_index, double x, double y) {
         right_clicked_row = post.index;
         show_context_menu_for_row (listbox, row, x, y);
     }
+
     private void show_context_menu_for_row (Gtk.ListBox listbox, ListBoxRow row, double x, double y) {
         // Popover の親は ScrolledWindow に統一安倍晋三
-        var pop    = context_popover;
+        var pop = context_popover;
 
         // listview 座標 -> scr_window 座標 に変換
-        Graphene.Point src = Graphene.Point ();             // Graphene.Point
-        src.init ((float)x, (float)y);
+        Graphene.Point src = Graphene.Point (); // Graphene.Point
+        src.init ((float) x, (float) y);
         Graphene.Point dest;
 
         // listview 座標 -> scr_window 座標 に変換
@@ -238,8 +244,8 @@ public class RessView : Adw.NavigationPage {
         }
 
         Gdk.Rectangle rect = {
-            (int)dest.x,
-            (int)dest.y,
+            (int) dest.x,
+            (int) dest.y,
             1,
             1
         };
@@ -287,9 +293,25 @@ public class RessView : Adw.NavigationPage {
             return;
         }
 
-        yield reload();
+        yield reload ();
 
         initialized = true;
+    }
+
+    private void refresh_mark (ResRow.ResItem post, Gtk.ListBoxRow row) {
+        // 書き込みマーク
+        switch (post.mark) {
+        case post.MarkType.MINE :
+            row.add_css_class ("row-mine");
+            break;
+        case post.MarkType.REPLY :
+            row.add_css_class ("row-reply");
+            break;
+        default:
+            row.remove_css_class ("row-reply");
+            row.remove_css_class ("row-mine");
+            break;
+        }
     }
 
     private void refresh_existing_rows_incremental (int existing_count) {
@@ -310,7 +332,7 @@ public class RessView : Adw.NavigationPage {
                     continue;
 
                 // 生成時: header が先、body が次に append している前提
-                Gtk.Widget? child = box.get_first_child ();
+                Gtk.Widget ? child = box.get_first_child ();
                 var header = child as Gtk.Label;
 
                 ClickableLabel? body = null;
@@ -321,6 +343,8 @@ public class RessView : Adw.NavigationPage {
                     set_post_widgets (post, header, body);
                     // span の signal は生成時に1回だけ繋いでいるので、そのまま使える
                 }
+
+                refresh_mark(post, row);
             }
 
             return i < existing_count;
@@ -358,10 +382,9 @@ public class RessView : Adw.NavigationPage {
 
     private void append_row_for_post (ResRow.ResItem post) {
         var row = build_row_for_post (post);
+        refresh_mark(post, row);
         listview.append (row);
     }
-
-
 
     private void clear_listbox () {
         Gtk.Widget? child = listview.get_first_child ();
@@ -372,18 +395,22 @@ public class RessView : Adw.NavigationPage {
         }
     }
 
-
     private int last_post_count = 0;
     private int old_count;
-    private async void reload () {
+    private async void reload (bool disponly=false) {
 
-        this.title=_("Loading...");
+        this.title = _("Loading...");
 
-        //save_scroll_position ();
+        // save_scroll_position ();
 
         try {
             var cancellable = new Cancellable ();
-            var new_posts = yield loader.load_from_url_async (url, cancellable);
+            Gee.ArrayList<ResRow.ResItem> new_posts;
+            if (disponly)//表示だけリロードしたいときがある
+                new_posts = posts;
+            else
+                new_posts = yield loader.load_from_url_async (url, cancellable);
+
             name = loader.get_title ();
 
             old_count = (posts != null) ? posts.size : 0;
@@ -392,15 +419,14 @@ public class RessView : Adw.NavigationPage {
             // モデル差し替え
             posts = new_posts;
 
-            // 自分の書き込み
-            mark_posthist ();
-
             // アンカー索引
             build_anchor_index ();
 
             // ID索引
             build_id_index ();
 
+            // 自分の書き込みを検索してインデックスを振る+振られたものを保持+リプライも見る
+            mark_posthist ();
 
             if (old_count == 0) {
                 // 初回
@@ -429,7 +455,7 @@ public class RessView : Adw.NavigationPage {
                 string? threadkey = FiveCh.DatLoader.guess_threadkey_from_url (url);
 
 
-                Db.DB db = new Db.DB();
+                Db.DB db = new Db.DB ();
                 string sql = """
                     INSERT INTO threadlist (board_url, bbs_id, thread_id, current_res_count, favorite, last_touch_date, title)
                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
@@ -439,15 +465,14 @@ public class RessView : Adw.NavigationPage {
                     last_touch_date = excluded.last_touch_date
                 """;
 
-                db.exec(sql, {site_base, board_key, threadkey, posts.size.to_string (), "0", new DateTime.now_utc ().to_unix ().to_string (), name});
-
-            } catch {
-                win.show_error_toast (_("Database error"));
+                db.exec (sql, { site_base, board_key, threadkey, posts.size.to_string (), "0", new DateTime.now_utc ().to_unix ().to_string (), name });
+            } catch (Error e) {
+                win.show_error_toast (e.message);
             }
         } catch (Error e) {
-            win.show_error_toast (_("Invalid error"));
+            win.show_error_toast (e.message);
         } finally {
-             this.title=name;
+            this.title = name;
         }
     }
 
@@ -468,7 +493,7 @@ public class RessView : Adw.NavigationPage {
     // -------- Spanクリック時の動作 --------
     private async void span_click (ResRow.ResItem post, Span span) {
         switch (span.type) {
-        case SpanType.REPLY:
+        case SpanType.REPLY :
             if (span.payload != null) {
                 uint target;
                 try {
@@ -479,15 +504,15 @@ public class RessView : Adw.NavigationPage {
                 scroll_to_post (target);
             }
             break;
-        case SpanType.ID:
+        case SpanType.ID :
             if (span.payload != null) {
                 var target = span.payload.substring (3, -1);
-                open_id_page(target);
+                open_id_page (target);
             }
             break;
-        case SpanType.URL:
-        case SpanType.URL_BOARD:
-        case SpanType.URL_THREAD:
+        case SpanType.URL :
+        case SpanType.URL_BOARD :
+        case SpanType.URL_THREAD :
             if (span.payload != null) {
                 var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;
                 if (nav == null) {
@@ -517,14 +542,12 @@ public class RessView : Adw.NavigationPage {
         case SpanType.REPLY:
             if (span.payload != null) {
                 try {
-
                 } catch (Error e) {}
             }
             break;
         case SpanType.URL:
             if (span.payload != null) {
                 try {
-
                 } catch (Error e) {}
             }
             break;
@@ -563,7 +586,7 @@ public class RessView : Adw.NavigationPage {
 
             foreach (var span in spans) {
                 if (budget <= 0)
-                    break;  // 10レス超え
+                    break; // 10レス超え
 
                 if (span.type != SpanType.REPLY || span.payload == null)
                     continue;
@@ -572,15 +595,14 @@ public class RessView : Adw.NavigationPage {
                 var targets = parse_reply_payload (span.payload, n, budget);
 
                 foreach (uint t in targets) {
-                    reply_to[(int)from_index].add (t);
-                    replied_from[(int)t].add (from_index);
+                    reply_to[(int) from_index].add (t);
+                    replied_from[(int) t].add (from_index);
                 }
 
                 budget -= targets.size;
             }
         }
     }
-
 
     // span から複数アンカー番号を取る
     // max_targets: この span から何個まで追加してよいか（残り枠）
@@ -622,7 +644,7 @@ public class RessView : Adw.NavigationPage {
                 string b = part.substring (dash + 1).strip ();
                 try {
                     int start = int.parse (a);
-                    int end   = int.parse (b);
+                    int end = int.parse (b);
                     if (end < start) {
                         int tmp = start;
                         start = end;
@@ -646,11 +668,11 @@ public class RessView : Adw.NavigationPage {
 
     // IDごとの索引を撮る
     private void build_id_index () {
-        id_to_indices = new Gee.HashMap<string,Gee.ArrayList<uint>> (
-            (Gee.HashDataFunc<string>) GLib.str_hash,
-            (Gee.EqualDataFunc<string>) GLib.str_equal
+        id_to_indices = new Gee.HashMap<string, Gee.ArrayList<uint>> (
+                                                                      (Gee.HashDataFunc<string>) GLib.str_hash,
+                                                                      (Gee.EqualDataFunc<string>) GLib.str_equal
         );
-        index_to_id_stats = new Gee.HashMap<uint,IdStats> ();
+        index_to_id_stats = new Gee.HashMap<uint, IdStats> ();
 
         int n = posts.size;
         for (int i = 0; i < n; i++) {
@@ -668,7 +690,7 @@ public class RessView : Adw.NavigationPage {
                 id_to_indices[id] = list;
             }
 
-            list.add (post.index);  // ResItem.index は 1-based の想定
+            list.add (post.index); // ResItem.index は 1-based の想定
         }
 
         // index -> (nth, total) を埋める
@@ -685,9 +707,8 @@ public class RessView : Adw.NavigationPage {
         }
     }
 
-
     private void scroll_to_post (uint index) {
-        var row = listview.get_row_at_index ((int) index-1);
+        var row = listview.get_row_at_index ((int) index - 1);
         if (row == null) {
             return;
         }
@@ -701,14 +722,14 @@ public class RessView : Adw.NavigationPage {
 
         // 親チェーンから ScrolledWindow を取る
         // ScrolledWindow -> Viewport -> ListBox という構造前提
-        var parent = listview.get_parent();
+        var parent = listview.get_parent ();
         Gtk.ScrolledWindow? scrolled = null;
 
         while (parent != null) {
             scrolled = parent as Gtk.ScrolledWindow;
             if (scrolled != null)
                 break;
-            parent = parent.get_parent();
+            parent = parent.get_parent ();
         }
 
         if (scrolled == null)
@@ -729,7 +750,6 @@ public class RessView : Adw.NavigationPage {
             scr_window.kinetic_scrolling = true;
             return false; // 一回だけ
         });
-
     }
 
     private void open_id_page (string id) {
@@ -746,7 +766,7 @@ public class RessView : Adw.NavigationPage {
         if (nav == null) {
             return;
         }
-        nav.push(new replies (name, id_list));
+        nav.push (new replies (name, id_list));
     }
 
     public Gtk.ListBox create_id_listbox (string id) {
@@ -758,7 +778,7 @@ public class RessView : Adw.NavigationPage {
 
         var idxs = id_to_indices[id];
         foreach (var idx in idxs) {
-            var p = posts[(int) idx-1];
+            var p = posts[(int) idx - 1];
             var row = build_row_for_post (p);
             id_list.append (row);
 
@@ -782,7 +802,7 @@ public class RessView : Adw.NavigationPage {
         if (nav == null) {
             return;
         }
-        nav.push(new replies (name, tree_list));
+        nav.push (new replies (name, tree_list));
     }
 
     public Gtk.ListBox create_reply_tree_listbox (uint start_idx) {
@@ -791,7 +811,7 @@ public class RessView : Adw.NavigationPage {
 
         Gee.ArrayList<uint> order;
         Gee.ArrayList<int> depths;
-        Gee.HashMap<uint,uint> parent;
+        Gee.HashMap<uint, uint> parent;
 
         build_reply_tree_indices (root, out order, out depths, out parent);
 
@@ -860,7 +880,6 @@ public class RessView : Adw.NavigationPage {
         return current;
     }
 
-
     // 指定した root からアンカーのぶんだけツリー順に index を並べる
     // order: 表示順の index 配列
     // depths: 各 index の深さ (0 = root)
@@ -868,10 +887,10 @@ public class RessView : Adw.NavigationPage {
     public void build_reply_tree_indices (uint root_index,
                                           out Gee.ArrayList<uint> order,
                                           out Gee.ArrayList<int> depths,
-                                          out Gee.HashMap<uint,uint> parent) {
+                                          out Gee.HashMap<uint, uint> parent) {
         order = new Gee.ArrayList<uint> ();
         depths = new Gee.ArrayList<int> ();
-        parent = new Gee.HashMap<uint,uint> ();
+        parent = new Gee.HashMap<uint, uint> ();
 
         int n = posts.size;
         if (n == 0)
@@ -891,7 +910,7 @@ public class RessView : Adw.NavigationPage {
                                  bool[] visited,
                                  Gee.ArrayList<uint> order,
                                  Gee.ArrayList<int> depths,
-                                 Gee.HashMap<uint,uint> parent) {
+                                 Gee.HashMap<uint, uint> parent) {
         if (idx >= (uint) visited.length)
             return;
 
@@ -912,7 +931,7 @@ public class RessView : Adw.NavigationPage {
         foreach (uint child in children) {
             // すでにどこかの経路で出てきたレスはスキップ
             // if (visited[child])
-            //     continue;
+            // continue;
 
             // ツリー上での親を記録
             parent[child] = idx;
@@ -964,7 +983,7 @@ public class RessView : Adw.NavigationPage {
         });
 
         body.span_right_clicked.connect ((span, x, y) => {
-            //on_span_right_clicked (post, span, x, y, body);
+            // on_span_right_clicked (post, span, x, y, body);
         });
 
         row_box.append (header);
@@ -1003,7 +1022,7 @@ public class RessView : Adw.NavigationPage {
                         Gtk.Widget? w = click.get_widget ();
                         if (w is Gtk.Picture) {
                             var pic = (Gtk.Picture) w;
-                            show_image.begin (imgcon.get_image_cache_path (url),url, pic);
+                            show_image.begin (imgcon.get_image_cache_path (url), url, pic);
                         }
                     }
                 });
@@ -1017,16 +1036,6 @@ public class RessView : Adw.NavigationPage {
         var row = new Gtk.ListBoxRow ();
         row.set_child (row_box);
 
-        // 書き込みマーク
-        switch (post.mark) {
-            case post.MarkType.MINE:
-                row.add_css_class ("row-mine");
-                break;
-            case post.MarkType.REPLY:
-                row.add_css_class ("row-reply");
-                break;
-        }
-
         return row;
     }
 
@@ -1038,7 +1047,7 @@ public class RessView : Adw.NavigationPage {
 
         // check_status = 0のデータを探し、DBを更新する
         try {
-            Db.DB db = new Db.DB();
+            Db.DB db = new Db.DB ();
 
             var rows = db.query ("""
                 SELECT *, rowid
@@ -1048,10 +1057,10 @@ public class RessView : Adw.NavigationPage {
                    AND thread_id = ?3
                    AND check_status = 0
                  ORDER BY last_touch_date desc
-            """, {site_base, board_key, threadkey});
+            """, { site_base, board_key, threadkey });
             foreach (var r in rows) {
-                for (int i = posts.size-1; i >= old_count; --i) {
-                    print(posts[i].body);
+                for (int i = posts.size - 1; i >= old_count; --i) {
+                    print (posts[i].body);
                     if (posts[i].body != r["text"]) {
                         continue;
                     }
@@ -1063,18 +1072,17 @@ public class RessView : Adw.NavigationPage {
                                    check_status = 1
                              WHERE rowid = ?2
                     """;
-                    db.exec (sql, {(i+1).to_string (), r["rowid"]});
+                    db.exec (sql, { (i + 1).to_string (), r["rowid"] });
                     break;
                 }
             }
-
         } catch (Error e) {
             win.show_error_toast (e.message);
         }
 
         // マークされていたらそのステータスを持つ
         try {
-            Db.DB db = new Db.DB();
+            Db.DB db = new Db.DB ();
 
             var rows = db.query ("""
                 SELECT *, rowid
@@ -1084,16 +1092,14 @@ public class RessView : Adw.NavigationPage {
                    AND thread_id = ?3
                    AND check_status = 1
                  ORDER BY post_index asc
-            """, {site_base, board_key, threadkey});
+            """, { site_base, board_key, threadkey });
             foreach (var r in rows) {
                 var p = posts[int.parse (r["post_index"]) - 1];
                 p.mark = ResRow.ResItem.MarkType.MINE;
             }
-
         } catch (Error e) {
             win.show_error_toast (e.message);
         }
-
     }
 
     // 画像拡大表示用の簡易ビューアに遷移する
@@ -1108,7 +1114,7 @@ public class RessView : Adw.NavigationPage {
         if (nav == null) {
             return;
         }
-        nav.push(new imageview (url, cache_path));
+        nav.push (new imageview (url, cache_path));
     }
 
     private async void add (int index) {
@@ -1129,10 +1135,10 @@ public class RessView : Adw.NavigationPage {
         if (right_clicked_indexes.is_empty) {
             r = (int) right_clicked_row;
         } else {
-            r = (int) right_clicked_indexes[(int) right_clicked_row-1];
+            r = (int) right_clicked_indexes[(int) right_clicked_row - 1];
         }
 
-        var p = posts[r-1];
+        var p = posts[r - 1];
 
         // 名前を戻す
         Pango.AttrList attrs;
@@ -1142,7 +1148,7 @@ public class RessView : Adw.NavigationPage {
         string clean_name;
         try {
             Pango.parse_markup (p.name, -1, '_',
-                            out attrs, out plain, out accel_char);
+                                out attrs, out plain, out accel_char);
             clean_name = plain;
         } catch (Error e) {
             clean_name = p.name;
@@ -1150,34 +1156,34 @@ public class RessView : Adw.NavigationPage {
 
 
         switch (arg) {
-            case "url":
-                sb.append (DatLoader.build_browser_url (url) + r.to_string ());
-                break;
-            case "name":
-                sb.append (clean_name);
-                break;
-            case "ID":
-                sb.append (p.id);
-                break;
-            case "text":
-                sb.append (p.body);
-                break;
-            case "set":
-                sb.append (r.to_string ()).append (" ");
-                sb.append (clean_name).append (" ");
-                sb.append (p.mail).append (" ");
-                sb.append (p.date).append (" ");
-                sb.append (p.id).append ("\n");
-                sb.append (p.body);
-                break;
-            case "thread_url":
-                sb.append (DatLoader.build_browser_url (url));
-                break;
-            case "subject":
-                sb.append (this.name);
-                break;
-            default:
-                return;
+        case "url" :
+            sb.append (DatLoader.build_browser_url (url) + r.to_string ());
+            break;
+        case "name":
+            sb.append (clean_name);
+            break;
+        case "ID":
+            sb.append (p.id);
+            break;
+        case "text":
+            sb.append (p.body);
+            break;
+        case "set":
+            sb.append (r.to_string ()).append (" ");
+            sb.append (clean_name).append (" ");
+            sb.append (p.mail).append (" ");
+            sb.append (p.date).append (" ");
+            sb.append (p.id).append ("\n");
+            sb.append (p.body);
+            break;
+        case "thread_url":
+            sb.append (DatLoader.build_browser_url (url));
+            break;
+        case "subject":
+            sb.append (this.name);
+            break;
+        default:
+            return;
         }
 
         common.copy_to_clipboard (sb.str);
@@ -1187,8 +1193,9 @@ public class RessView : Adw.NavigationPage {
     private async void go_up () {
         scroll_to_post (1);
     }
+
     private async void go_down () {
-        if (is_read || read == 0 ) {
+        if (is_read || read == 0) {
             scroll_to_post (posts.size);
         } else {
             scroll_to_post (read);
@@ -1232,14 +1239,60 @@ public class RessView : Adw.NavigationPage {
         if (right_clicked_indexes.is_empty) {
             r = (int) right_clicked_row;
         } else {
-            r = (int) right_clicked_indexes[(int) right_clicked_row-1];
+            r = (int) right_clicked_indexes[(int) right_clicked_row - 1];
         }
-        message (right_clicked_indexes.size.to_string ());
         add.begin (r);
     }
 
     private void on_copy_activate (Variant? param) {
         string arg = param.get_string ();
         copy.begin (arg);
+    }
+
+    private async void on_mark_activate () {
+        string? board_key = FiveCh.Board.guess_board_key_from_url (url);
+        string? site_base = FiveCh.Board.guess_site_base_from_url (url);
+        string? threadkey = FiveCh.DatLoader.guess_threadkey_from_url (url);
+
+        int r;
+        if (right_clicked_indexes.is_empty) {
+            r = (int) right_clicked_row;
+        } else {
+            r = (int) right_clicked_indexes[(int) right_clicked_row - 1];
+        }
+
+        var p = posts[r - 1];
+
+        // マーク解除
+        if (p.mark == p.MarkType.MINE) {
+            p.mark = p.MarkType.NONE;
+            try {
+                Db.DB db = new Db.DB ();
+                var sql = """
+                        DELETE FROM posthist
+                        WHERE board_url = ?1
+                          AND bbs_id = ?2
+                          AND thread_id = ?3
+                          AND post_index = ?4
+                    """;
+                db.exec (sql, { site_base, board_key, threadkey, r.to_string () });
+            } catch (Error e) {
+                win.show_error_toast (e.message);
+            }
+        } else {
+            p.mark = p.MarkType.MINE;
+            try {
+                Db.DB db = new Db.DB ();
+                var sql = """
+                        INSERT INTO posthist (board_url, bbs_id, thread_id, post_index, check_status, text, last_touch_date)
+                        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                """;
+                db.exec (sql, { site_base, board_key, threadkey, r.to_string (), "1", p.body, new DateTime.now_utc ().to_unix ().to_string () });
+            } catch (Error e) {
+                win.show_error_toast (e.message);
+            }
+        }
+
+        yield reload (true);
     }
 }
