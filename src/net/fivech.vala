@@ -524,6 +524,17 @@ namespace FiveCh {
                                        null);
             }
 
+            if (!looks_success) {
+                return new PostResult (PostPageKind.CONFIRM,
+                                       html,
+                                       title,
+                                       tag_2ch,
+                                       msg,
+                                       errmsg,
+                                       conf,
+                                       confirm_form);
+            }
+
             // どちらでもなければOK扱い（細かい判定は必要に応じて増やす）
             return new PostResult (PostPageKind.OK,
                                    html,

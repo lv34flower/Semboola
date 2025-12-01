@@ -194,7 +194,6 @@ public class RessView : Adw.NavigationPage {
             if (clicked_indexes.is_empty) {
                 // idx = idx;
             } else {
-                print (clicked_indexes.size.to_string ());
                 idx = (int) clicked_indexes[idx]-1;
             }
 
@@ -1183,7 +1182,6 @@ public class RessView : Adw.NavigationPage {
             """, { site_base, board_key, threadkey });
             foreach (var r in rows) {
                 for (int i = posts.size - 1; i >= old_count; --i) {
-                    print (posts[i].body);
                     if (posts[i].body != r["text"]) {
                         continue;
                     }
