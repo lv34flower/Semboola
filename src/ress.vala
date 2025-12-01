@@ -399,7 +399,7 @@ public class RessView : Adw.NavigationPage {
         Idle.add (() => {
             int chunk = 30;
             for (int n = 0; n < chunk && i < posts.size; n++, i++) {
-                append_row_for_post.begin (posts[i]);
+                append_row_for_post (posts[i]);
             }
             res_count = i;
             return i < posts.size;
@@ -412,14 +412,14 @@ public class RessView : Adw.NavigationPage {
         Idle.add (() => {
             int chunk = 30;
             for (int n = 0; n < chunk && i < posts.size; n++, i++) {
-                append_row_for_post.begin (posts[i]);
+                append_row_for_post (posts[i]);
             }
             res_count = i;
             return i < posts.size;
         });
     }
 
-    private async void append_row_for_post (ResRow.ResItem post) {
+    private void append_row_for_post (ResRow.ResItem post) {
         var row = build_row_for_post (post);
         refresh_mark(post, row);
         listview.append (row);
