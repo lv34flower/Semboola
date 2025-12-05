@@ -1062,13 +1062,12 @@ namespace FiveCh {
                 var parts = line.split ("<>");
                 if (parts.length < 4) continue;
 
-                // 先頭が "<NAME>" なら、その分だけ先頭を削る
-                const string prefix = "<NAME>";
-                if (parts[0].has_prefix (prefix)) {
-                    parts[0] = parts[0].substring (prefix.length);
-                }
+                // Spanっぽいのは全部消す
+                var regex = new GLib.Regex("<(?!/?b>)[^>]+>");
 
-                string name = "<b>" + parts[0] + "</b>";
+                string name = regex.replace(parts[0], -1, 0, "");
+
+                name = "<b>" + name + "</b>";
 
                 //name = Client.decode_html_entities (name);
                 string mail = Client.decode_html_entities (parts[1]);
