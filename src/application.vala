@@ -70,9 +70,11 @@ public class Semboola.Application : Adw.Application {
             application_icon = "jp.lv34.Semboola",
             developer_name = "v34",
             translator_credits = _("translator-credits"),
-            version = "0.1.0",
+            version = "0.0.0",
             developers = developers,
-            copyright = "This application comes with absolutely no warranty. See the GNU General Public License, version 3 or later for details.",
+            copyright = "(c) 2025 v34",
+            license_type = Gtk.License.GPL_3_0,
+            website = "https://github.com/lv34flower/Semboola",
         };
 
         about.present (this.active_window);
