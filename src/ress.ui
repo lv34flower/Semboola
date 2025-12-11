@@ -121,6 +121,11 @@
       <attribute name="action">win.thread_top</attribute>
       <attribute name="label" translatable="yes">Top</attribute>
     </item>
+    <item>
+      <attribute name="action">app.blocklist</attribute>
+      <attribute name="label" translatable="yes">Blocklist</attribute>
+      <attribute name="target">res</attribute>
+    </item>
     <section>
       <attribute name="label" translatable="yes">Copy</attribute>
       <item>

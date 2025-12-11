@@ -122,6 +122,7 @@ public class RessView : Adw.NavigationPage {
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
         this.shown.connect (() => {
             win = this.get_root () as Semboola.Window;
+            win.url = this.url;
             clicked_indexes.clear (); // 並び=通常
             rep_type = replies.Type.NONE;
             init_load.begin ();
@@ -1306,7 +1307,7 @@ public class RessView : Adw.NavigationPage {
             sb.append (p.body);
             break;
         case "thread_url":
-            sb.append (DatLoader.build_browser_url (url));
+            sb.append (Board.build_thread_url (url));
             break;
         case "subject":
             sb.append (this.name);

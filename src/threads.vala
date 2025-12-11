@@ -130,6 +130,7 @@ public class ThreadsView : Adw.NavigationPage {
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
         this.shown.connect (() => {
             win = this.get_root() as Semboola.Window;
+            win.url = this.url;
             init_load.begin ();
             load_threadlist.begin (); // 未読更新
         });

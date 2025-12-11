@@ -35,6 +35,10 @@ public class Semboola.Window : Adw.ApplicationWindow {
         }
     }
 
+    public string url;  // 現在地のURL
+
+    private SimpleActionGroup app_actions;
+
     [GtkChild]
     unowned Adw.ToastOverlay toast;
 
@@ -45,6 +49,19 @@ public class Semboola.Window : Adw.ApplicationWindow {
         Object (application: app);
     }
 
+    construct {
+        app_actions = new SimpleActionGroup ();
+
+        var copy_action = new SimpleAction ("blocklist", VariantType.STRING);
+        copy_action.activate.connect ((param) => {
+            on_blocklist_activate (param);
+        });
+        app_actions.add_action (copy_action);
+
+        // "app." プレフィックスでこのページに登録
+        this.insert_action_group ("app", app_actions);
+    }
+
     static construct {
         typeof (BoardsView).ensure ();
     }
@@ -52,6 +69,10 @@ public class Semboola.Window : Adw.ApplicationWindow {
     protected override void constructed () {
         base.constructed();
         nav.push (new BoardsView ());
+    }
+
+    private void on_blocklist_activate (GLib.Variant param) {
+        nav.push (new nglist ());
     }
 
     // エラー表示

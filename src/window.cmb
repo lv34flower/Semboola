@@ -6,7 +6,7 @@
   <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="41350e67ea88ca5b2936f3bcca94f23a1102797f7205a24b969c2ac1089d86df"/>
   <ui template-class="ThreadsView" filename="threads.ui" sha256="22629bb1c83fcc45151f54886b92238be8228b3e621fef7e281d49d9c549c33f"/>
   <ui template-class="ThreadRow" filename="thread_row.ui" sha256="5696d61a684cfb71f5540b8260879f70794b8576938ea4be594d4bb00473b25f"/>
-  <ui template-class="RessView" filename="ress.ui" sha256="d0036a483441238528a0e459b8c8f874eff3e7f14e3ecaaadb82a11b1b23ff55"/>
+  <ui template-class="RessView" filename="ress.ui" sha256="55286561d71e6a68a34c7fa6d11b7f5ee606158e1ef2bd71df3d93249584c7e9"/>
   <ui template-class="new_thread" filename="new_thread.ui" sha256="e49292fff7a877d94f15839002cae62ab53b0a215c3a3da8900298214ffa20b2"/>
   <ui template-class="cookie_confirm" filename="cookie_confirm.ui" sha256="9e4fa0165941f9438fc11f8aedb99621fae27647bfb06f35240df4039c553fa4"/>
   <ui template-class="new_res" filename="new_res.ui" sha256="fe54770e55f43dcc9d11bfa2b19f542967a89c471fb8bf6570369121465d1368"/>
@@ -15,4 +15,7 @@
   <ui template-class="imageview" filename="imageview.ui" sha256="b4abbe26553a0d759e7e12a8b5eed45e25d8efbcc3096890a1d42d05daf88442"/>
   <ui template-class="SemboolaWindow" filename="window.ui" sha256="b859744bef755086e5263d8100b2da46d1f2bda74b10e8b5e42aa62c3e6418cb"/>
   <ui template-class="local_rules" filename="local_rules.ui" sha256="1149ba0088ea5f1c162c4342f9bfb32f58ce07f54ff08379c1a82cbfed09f629"/>
+  <ui template-class="nglist" filename="ng.ui" sha256="278ac8bcebecc0016357b1586623eb26e79c5d0a9dea7ffca2fe8eac481e9dbf"/>
+  <ui template-class="ng_sub" filename="subui/ng_sub.ui" sha256="7a2be24b32016c8bfa74743a9fe98d7c9e87f7fa44f62c92e24bab7e17da112b"/>
+  <ui template-class="ng_row" filename="subui/ng_row.ui" sha256="9c2ea14c193cc7ea873006f3a6f771e8b89cfcd89ba939895336e941e1187758"/>
 </cambalache-project>

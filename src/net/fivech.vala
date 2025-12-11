@@ -153,7 +153,7 @@ namespace FiveCh {
             return null;
         }
 
-        public static string? build_browser_url (string urlr) {
+        public static string? build_thread_url (string urlr) {
             string url = urlr.strip ();
 
             string? board_key = guess_board_key_from_url (url);
@@ -162,7 +162,7 @@ namespace FiveCh {
                 throw new IOError.FAILED (_("Invalid URL"));
             }
 
-            return site_base + "test/read.cgi/" + board_key + "/";
+            return site_base + board_key + "/";
         }
     }
 
@@ -1054,6 +1054,8 @@ namespace FiveCh {
             var lines = text.split ("\n");
             uint idx = 1;
 
+            var regex = new GLib.Regex("<(?!/?b>)[^>]+>");
+            var tag_rx = new GLib.Regex ("<[^>]+>");
             foreach (var raw_line in lines) {
                 var line = raw_line.strip ();
                 if (line.length == 0) continue;
@@ -1063,8 +1065,6 @@ namespace FiveCh {
                 if (parts.length < 4) continue;
 
                 // Spanっぽいのは全部消す
-                var regex = new GLib.Regex("<(?!/?b>)[^>]+>");
-
                 string name = regex.replace(parts[0], -1, 0, "");
 
                 name = "<b>" + name + "</b>";
@@ -1078,7 +1078,6 @@ namespace FiveCh {
                     .replace (" <br> ", "\n")
                     .replace ("<br>", "\n");
                 try {
-                    var tag_rx = new GLib.Regex ("<[^>]+>");
                     body = tag_rx.replace (body, -1, 0, "");
                 } catch (Error e) {
                     // タグ除去失敗時はそのまま

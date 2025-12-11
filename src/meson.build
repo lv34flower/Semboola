@@ -2,6 +2,7 @@ Semboola_sources = [
   'main.vala',
   'application.vala',
   'window.vala',
+  'ng.vala',
   'add_board.vala',
   'boards.vala',
   'thread_hist.vala',
@@ -20,6 +21,8 @@ Semboola_sources = [
   'net/db.vala',
   'common/common.vala',
   'common/image.vala',
+  'subui/ng_sub.vala',
+  'subui/ng_row.vala',
 ]
 
 cc = meson.get_compiler('c')

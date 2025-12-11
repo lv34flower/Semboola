@@ -1,0 +1,106 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.96.3 -->
+<interface>
+  <!-- interface-name ng.ui -->
+  <requires lib="gtk" version="4.18"/>
+  <requires lib="libadwaita" version="1.4"/>
+  <template class="nglist" parent="AdwNavigationPage">
+    <property name="title" translatable="yes">Blocklist</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="AdwHeaderBar" id="header">
+            <property name="show-start-title-buttons">False</property>
+            <child>
+              <object class="GtkButton" id="bd_button_add">
+                <property name="has-frame">False</property>
+                <property name="label" translatable="yes">Add</property>
+                <signal name="clicked" handler="on_add_click"/>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">list-add-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton" id="bd_toggle_edit">
+                <property name="margin-start">6</property>
+                <property name="visible">False</property>
+                <signal name="toggled" handler="on_editmode"/>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">user-trash-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <property name="vscrollbar-policy">always</property>
+                <child>
+                  <object class="GtkListView" id="listview">
+                    <property name="hexpand">True</property>
+                    <property name="show-separators">True</property>
+                    <property name="single-click-activate">True</property>
+                    <property name="vexpand">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkActionBar">
+            <child type="center">
+              <object class="GtkBox">
+                <child>
+                  <object class="GtkToggleButton" id="btn_thread">
+                    <property name="active">True</property>
+                    <property name="label" translatable="yes">Thread</property>
+                    <property name="margin-end">6</property>
+                    <property name="width-request">100</property>
+                    <signal name="toggled" handler="on_tab_change"/>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="btn_id">
+                    <property name="group">btn_thread</property>
+                    <property name="label" translatable="yes">ID</property>
+                    <property name="margin-end">6</property>
+                    <property name="width-request">100</property>
+                    <signal name="toggled" handler="on_tab_change"/>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="btn_name">
+                    <property name="group">btn_thread</property>
+                    <property name="label" translatable="yes">Name</property>
+                    <property name="margin-end">6</property>
+                    <property name="width-request">100</property>
+                    <signal name="toggled" handler="on_tab_change"/>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="btn_word">
+                    <property name="group">btn_thread</property>
+                    <property name="label" translatable="yes">Keyword</property>
+                    <property name="width-request">100</property>
+                    <signal name="toggled" handler="on_tab_change"/>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
