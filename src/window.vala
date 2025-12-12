@@ -21,6 +21,7 @@
 using Gtk;
 using GLib;
 using Gdk;
+using FiveCh;
 
 [GtkTemplate (ui = "/jp/lv34/Semboola/window.ui")]
 public class Semboola.Window : Adw.ApplicationWindow {
@@ -58,6 +59,12 @@ public class Semboola.Window : Adw.ApplicationWindow {
         });
         app_actions.add_action (copy_action);
 
+        var ngthread_action = new SimpleAction ("ng_thread", null);
+        ngthread_action.activate.connect (() => {
+            on_ngthread_activate ();
+        });
+        app_actions.add_action (ngthread_action);
+
         // "app." プレフィックスでこのページに登録
         this.insert_action_group ("app", app_actions);
     }
@@ -69,6 +76,27 @@ public class Semboola.Window : Adw.ApplicationWindow {
     protected override void constructed () {
         base.constructed();
         nav.push (new BoardsView ());
+    }
+
+    private void on_ngthread_activate () {
+        string u = "";
+        string t = "";
+
+        try {
+            var tu = DatLoader.build_browser_url (url);
+            u = Board.build_board_url (url);
+            t = common.url_to_subject (tu, this);
+        } catch {
+            // 捨てる
+        }
+
+
+        var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
+        var popup = new ng_sub (window, g_app, NgMode.THREAD, -1, u, t);
+        popup.submitted.connect (() => {
+
+        });
+        popup.present ();
     }
 
     private void on_blocklist_activate (GLib.Variant param) {

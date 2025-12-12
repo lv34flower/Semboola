@@ -153,7 +153,7 @@ namespace FiveCh {
             return null;
         }
 
-        public static string? build_thread_url (string urlr) {
+        public static string? build_board_url (string urlr) {
             string url = urlr.strip ();
 
             string? board_key = guess_board_key_from_url (url);

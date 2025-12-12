@@ -61,10 +61,10 @@ public class ng_sub : Adw.ApplicationWindow {
     private unowned Gtk.Entry entry_url;
 
 
-    public ng_sub (Gtk.Window parent, Adw.Application app, NgMode mode, long rowid, string board_url = "", string board_bame = "") {
+    public ng_sub (Gtk.Window parent, Adw.Application app, NgMode mode, long rowid, string board_url = "", string text = "") {
         Object (application: app, transient_for: parent);
         this.rowid = rowid;
-        label_bbsname.label = board_bame;
+        textbuffer.text = text;
         entry_url.text = board_url;
         this.mode = mode;
 
@@ -74,7 +74,7 @@ public class ng_sub : Adw.ApplicationWindow {
 
         if (board_url == "ALL") {
             try {
-                u = Board.build_thread_url (win.url);
+                u = Board.build_board_url (win.url);
             } catch {
                 // 捨てる
             }

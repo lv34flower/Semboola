@@ -145,7 +145,7 @@ public class nglist : Adw.NavigationPage {
         string u = "";
 
         try {
-            u = Board.build_thread_url (win.url);
+            u = Board.build_board_url (win.url);
         } catch {
             // 捨てる
         }

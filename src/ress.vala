@@ -158,6 +158,13 @@ public class RessView : Adw.NavigationPage {
         });
         page_actions.add_action (mark_action);
 
+        // ng
+        var ng_action = new SimpleAction ("ng", VariantType.STRING);
+        ng_action.activate.connect ((param) => {
+            on_ng_activate.begin (param);
+        });
+        page_actions.add_action (ng_action);
+
         // "win." プレフィックスでこのページに登録
         this.insert_action_group ("win", page_actions);
     }
@@ -1286,34 +1293,34 @@ public class RessView : Adw.NavigationPage {
 
 
         switch (arg) {
-        case "url" :
-            sb.append (DatLoader.build_browser_url (url) + r.to_string ());
-            break;
-        case "name":
-            sb.append (clean_name);
-            break;
-        case "ID":
-            sb.append (p.id);
-            break;
-        case "text":
-            sb.append (p.body);
-            break;
-        case "set":
-            sb.append (r.to_string ()).append (" ");
-            sb.append (clean_name).append (" ");
-            sb.append (p.mail).append (" ");
-            sb.append (p.date).append (" ");
-            sb.append (p.id).append ("\n");
-            sb.append (p.body);
-            break;
-        case "thread_url":
-            sb.append (Board.build_thread_url (url));
-            break;
-        case "subject":
-            sb.append (this.name);
-            break;
-        default:
-            return;
+            case "url" :
+                sb.append (DatLoader.build_browser_url (url) + r.to_string ());
+                break;
+            case "name":
+                sb.append (clean_name);
+                break;
+            case "ID":
+                sb.append (p.id);
+                break;
+            case "text":
+                sb.append (p.body);
+                break;
+            case "set":
+                sb.append (r.to_string ()).append (" ");
+                sb.append (clean_name).append (" ");
+                sb.append (p.mail).append (" ");
+                sb.append (p.date).append (" ");
+                sb.append (p.id).append ("\n");
+                sb.append (p.body);
+                break;
+            case "thread_url":
+                sb.append (DatLoader.build_browser_url (url));
+                break;
+            case "subject":
+                sb.append (this.name);
+                break;
+            default:
+                return;
         }
 
         common.copy_to_clipboard (sb.str);
@@ -1388,6 +1395,67 @@ public class RessView : Adw.NavigationPage {
     private void on_copy_activate (Variant? param) {
         string arg = param.get_string ();
         copy.begin (arg);
+    }
+
+    private async void on_ng_activate (Variant? param) {
+        string arg = param.get_string ();
+
+        string u = "";
+
+        try {
+            u = Board.build_board_url (url);
+        } catch {
+            // 捨てる
+        }
+
+        int r;
+        if (clicked_indexes.is_empty) {
+            r = (int) right_clicked_row;
+        } else {
+            r = (int) clicked_indexes[(int) right_clicked_row - 1];
+        }
+
+        var p = posts[r - 1];
+
+        // 名前を戻す
+        Pango.AttrList attrs;
+        string plain;
+        unichar accel_char;
+
+        string clean_name;
+        try {
+            Pango.parse_markup (p.name, -1, '_',
+                                out attrs, out plain, out accel_char);
+            clean_name = plain;
+        } catch (Error e) {
+            clean_name = p.name;
+        }
+
+        NgMode mode;
+        string text;
+        switch (arg) {
+            case "name" :
+                mode = NgMode.NAME;
+                text = clean_name;
+                break;
+            case "word":
+                mode = NgMode.WORD;
+                text = p.body;
+                break;
+            case "id":
+                mode = NgMode.ID;
+                text = p.id;
+                break;
+            default:
+                return;
+        }
+
+        var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
+        var popup = new ng_sub (window, g_app, mode, -1, u, text);
+        popup.submitted.connect (() => {
+
+        });
+        popup.present ();
     }
 
     private async void on_mark_activate () {

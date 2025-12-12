@@ -126,6 +126,10 @@
       <attribute name="label" translatable="yes">Blocklist</attribute>
       <attribute name="target">res</attribute>
     </item>
+    <item>
+      <attribute name="action">app.ng_thread</attribute>
+      <attribute name="label" translatable="yes">Mute thread</attribute>
+    </item>
     <section>
       <attribute name="label" translatable="yes">Copy</attribute>
       <item>
@@ -177,5 +181,23 @@
       <attribute name="action">win.mark</attribute>
       <attribute name="label" translatable="yes">Mark</attribute>
     </item>
+    <submenu>
+      <attribute name="label" translatable="yes">Mute</attribute>
+      <item>
+        <attribute name="action">win.ng</attribute>
+        <attribute name="label">Name</attribute>
+        <attribute name="target">name</attribute>
+      </item>
+      <item>
+        <attribute name="action">win.ng</attribute>
+        <attribute name="label">ID</attribute>
+        <attribute name="target">id</attribute>
+      </item>
+      <item>
+        <attribute name="action">win.ng</attribute>
+        <attribute name="label" translatable="yes">Keyword</attribute>
+        <attribute name="target">word</attribute>
+      </item>
+    </submenu>
   </menu>
 </interface>

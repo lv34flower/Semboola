@@ -95,6 +95,11 @@
       <attribute name="action">win.local_rules</attribute>
       <attribute name="label" translatable="yes">Local rules</attribute>
     </item>
+    <item>
+      <attribute name="action">app.blocklist</attribute>
+      <attribute name="label" translatable="yes">Blocklist</attribute>
+      <attribute name="target">thread</attribute>
+    </item>
     <section>
       <attribute name="label" translatable="yes">Copy</attribute>
       <item>

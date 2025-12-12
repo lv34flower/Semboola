@@ -159,4 +159,33 @@ namespace common {
         }
     }
 
+    // DBを使用。URLからスレタイにする
+    string url_to_subject (string url, Semboola.Window win) {
+
+        string? board_key = FiveCh.Board.guess_board_key_from_url (url);
+        string? site_base = FiveCh.Board.guess_site_base_from_url (url);
+        string? threadkey = FiveCh.DatLoader.guess_threadkey_from_url (url);
+
+        try {
+            Db.DB db = new Db.DB();
+
+            var rows = db.query ("""
+                SELECT *
+                  FROM threadlist
+                 WHERE board_url = ?1
+                   AND bbs_id = ?2
+                   AND thread_id = ?3
+            """, {site_base, board_key, threadkey});
+
+            foreach (var r in rows) {
+                return r["title"];
+            }
+
+        } catch (Error e) {
+            win.show_error_toast (e.message);
+        }
+
+        return "";
+    }
+
 }

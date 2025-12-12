@@ -65,6 +65,7 @@ public class BoardsView : Adw.NavigationPage {
     public BoardsView () {
         this.shown.connect (() => {
             win = this.get_root() as Semboola.Window;
+            win.url = "";
             common.clean_data.begin ();
             bbslist.begin ();
         });
