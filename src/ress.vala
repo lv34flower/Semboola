@@ -39,6 +39,276 @@ public class RessView : Adw.NavigationPage {
 
     private ImageControl imgcon = new ImageControl ();
 
+    // ---- NG filtering (ngtext) ------------------------------------------------
+    // hide/chain は現状無視。enable=1 の ID/NAME/WORD に対応。
+
+    private class AhoMatcher : Object {
+        private class Node : Object {
+            public Gee.HashMap<unichar, int> next = new Gee.HashMap<unichar, int> ();
+            public int fail = 0;
+            public bool output = false;
+        }
+
+        private Gee.ArrayList<Node> nodes = new Gee.ArrayList<Node> ();
+        private bool built = false;
+
+        public AhoMatcher () {
+            nodes.add (new Node ());
+        }
+
+        public void clear () {
+            nodes.clear ();
+            nodes.add (new Node ());
+            built = false;
+        }
+
+        public void add_pattern (string pat) {
+            if (pat == null || pat == "")
+                return;
+
+            built = false;
+
+            int state = 0;
+            for (unowned string p = pat; p.get_char () != 0; p = p.next_char ()) {
+                unichar c = p.get_char ();
+
+                // 値型(int)の get() だけに頼ると「未登録=0」に見える環境があるので
+                // has_key() で存在判定してから get() する。
+                if (!nodes[state].next.has_key (c)) {
+                    nodes.add (new Node ());
+                    int new_state = nodes.size - 1;
+                    nodes[state].next.set (c, new_state);
+                    state = new_state;
+                } else {
+                    state = nodes[state].next.get (c);
+                }
+            }
+            nodes[state].output = true;
+        }
+
+        private void build () {
+            if (built)
+                return;
+
+            built = true;
+
+            // BFS で failure link を作る
+            GLib.Queue<int> q = new GLib.Queue<int> ();
+
+            foreach (var e in nodes[0].next.entries) {
+                int s = e.value;
+                nodes[s].fail = 0;
+                q.push_tail (s);
+            }
+
+            while (q.get_length () > 0) {
+                int r = q.pop_head ();
+
+                foreach (var e in nodes[r].next.entries) {
+                    unichar a = e.key;
+                    int s = e.value;
+
+                    q.push_tail (s);
+
+                    int state = nodes[r].fail;
+                    while (state != 0 && !nodes[state].next.has_key (a)) {
+                        state = nodes[state].fail;
+                    }
+
+                    nodes[s].fail = nodes[state].next.has_key (a) ? nodes[state].next.get (a) : 0;
+                    nodes[s].output = nodes[s].output || nodes[nodes[s].fail].output;
+                }
+            }
+        }
+
+        public bool match (string text) {
+            if (text == null || text == "")
+                return false;
+
+            if (nodes.size <= 1)
+                return false;
+
+            build ();
+
+            int state = 0;
+            for (unowned string p = text; p.get_char () != 0; p = p.next_char ()) {
+                unichar c = p.get_char ();
+
+                while (state != 0 && !nodes[state].next.has_key (c)) {
+                    state = nodes[state].fail;
+                }
+
+                if (nodes[state].next.has_key (c))
+                    state = nodes[state].next.get (c);
+
+                if (nodes[state].output)
+                    return true;
+            }
+
+            return false;
+        }
+    }
+
+
+    private AhoMatcher ng_word_aho = new AhoMatcher ();
+    private AhoMatcher ng_name_aho = new AhoMatcher ();
+
+    private Gee.HashSet<string> ng_id_exact = new Gee.HashSet<string> ();
+
+    private Gee.ArrayList<Regex> ng_word_regex = new Gee.ArrayList<Regex> ();
+    private Gee.ArrayList<Regex> ng_name_regex = new Gee.ArrayList<Regex> ();
+    private Gee.ArrayList<Regex> ng_id_regex   = new Gee.ArrayList<Regex> ();
+
+    // post.index(1-start) -> NG判定キャッシュ
+    private Gee.HashMap<uint, bool> ng_mask_cache = new Gee.HashMap<uint, bool> ();
+
+    private void load_ngtext_rules_for_current_board () {
+        ng_word_aho.clear ();
+        ng_name_aho.clear ();
+        ng_id_exact.clear ();
+        ng_word_regex.clear ();
+        ng_name_regex.clear ();
+        ng_id_regex.clear ();
+        ng_mask_cache.clear ();
+
+        string board_u = "";
+        try { board_u = Board.build_board_url (url); } catch { board_u = ""; }
+
+        try {
+            Db.DB db = new Db.DB ();
+
+            // enable=1 の ID/NAME/WORD をまとめて取得（hide/chain は無視）
+            var rows = db.query ("""
+                SELECT text, type, is_regex, board
+                  FROM ngtext
+                 WHERE enable != 0
+                   AND (type = ?1 OR type = ?2 OR type = ?3)
+                   AND (board = 'ALL' OR board = ?4)
+                 ORDER BY rowid ASC
+            """, {
+                ((int) NgMode.ID).to_string (),
+                ((int) NgMode.NAME).to_string (),
+                ((int) NgMode.WORD).to_string (),
+                board_u
+            });
+
+            foreach (var r in rows) {
+                string t = r["text"];
+                if (t == null || t == "")
+                    continue;
+
+                int type = int.parse (r["type"]);
+                bool is_regex = (r["is_regex"] != null && r["is_regex"] != "0");
+
+                if (is_regex) {
+                    try {
+                        var rx = new Regex (t, RegexCompileFlags.OPTIMIZE);
+                        if (type == (int) NgMode.WORD)      ng_word_regex.add (rx);
+                        else if (type == (int) NgMode.NAME) ng_name_regex.add (rx);
+                        else if (type == (int) NgMode.ID)   ng_id_regex.add (rx);
+                    } catch {
+                        // 正規表現が壊れてたら無視
+                    }
+                } else {
+                    if (type == (int) NgMode.WORD) {
+                        ng_word_aho.add_pattern (t);
+                    } else if (type == (int) NgMode.NAME) {
+                        // NAME は部分一致として扱う（大量でも Aho で吸収）
+                        ng_name_aho.add_pattern (t);
+                    } else if (type == (int) NgMode.ID) {
+                        // ID は基本的に完全一致（部分一致が欲しいときは is_regex=1 を使う）
+                        ng_id_exact.add (t);
+                    }
+                }
+            }
+        } catch (Error e) {
+            win.show_error_toast (e.message);
+        }
+    }
+
+    private bool is_ng_post_slow (ResRow.ResItem post) {
+        if (post == null)
+            return false;
+
+        // ID
+        if (post.id != null && post.id != "") {
+            if (ng_id_exact.contains (post.id))
+                return true;
+            foreach (var rx in ng_id_regex) {
+                try { if (rx.match (post.id)) return true; } catch {}
+            }
+        }
+
+        // NAME
+        Pango.AttrList attrs;
+        string plain;
+        unichar accel_char;
+
+        string clean_name;
+        try {
+            Pango.parse_markup (post.name, -1, '_',
+                                out attrs, out plain, out accel_char);
+            clean_name = plain;
+        } catch (Error e) {
+            clean_name = post.name;
+        }
+
+        if (clean_name != null && clean_name != "") {
+            if (ng_name_aho.match (clean_name))
+                return true;
+            foreach (var rx in ng_name_regex) {
+                try { if (rx.match (clean_name)) return true; } catch {}
+            }
+        }
+
+        // WORD (body)
+        if (post.body != null && post.body != "") {
+            if (ng_word_aho.match (post.body))
+                return true;
+            foreach (var rx in ng_word_regex) {
+                try { if (rx.match (post.body)) return true; } catch {}
+            }
+        }
+
+        return false;
+    }
+
+    private bool is_post_ng_cached (ResRow.ResItem post) {
+        if (post == null)
+            return false;
+
+        if (ng_mask_cache.has_key (post.index))
+            return ng_mask_cache[post.index];
+
+        bool ng = is_ng_post_slow (post);
+        ng_mask_cache[post.index] = ng;
+        return ng;
+    }
+
+    private void rebuild_ng_mask_cache_for_all_posts () {
+        ng_mask_cache.clear ();
+        foreach (var p in posts) {
+            ng_mask_cache[p.index] = is_ng_post_slow (p);
+        }
+    }
+
+    private void apply_ng_visibility_to_rowbox (ResRow.ResItem post, Gtk.Box row_box) {
+        bool ng = is_post_ng_cached (post);
+
+        // row_box は [header, body, (thumbs...)] の順に append している前提
+        Gtk.Widget? header_w = row_box.get_first_child ();
+        Gtk.Widget? body_w = (header_w != null) ? header_w.get_next_sibling () : null;
+        if (body_w != null)
+            body_w.set_visible (!ng);
+
+        Gtk.Widget? w = (body_w != null) ? body_w.get_next_sibling () : null;
+        while (w != null) {
+            w.set_visible (!ng);
+            w = w.get_next_sibling ();
+        }
+    }
+
+
     // private GLib.ListStore store = new GLib.ListStore (typeof (ResRow.ResItem));
     private Gee.ArrayList<ResRow.ResItem> posts;
 
@@ -303,6 +573,20 @@ public class RessView : Adw.NavigationPage {
     }
 
     private void set_post_widgets (ResRow.ResItem post, Gtk.Label header, ClickableLabel body) {
+        // NG の場合は本文などを見せずに "NG TEXT" だけ出す
+        if (is_post_ng_cached (post)) {
+            header.use_markup = true;
+            header.set_markup (_("Blocked"));
+            body.set_visible (false);
+
+            // span も空にして、クリックできる部分を残さない
+            var empty_spans = new Gee.ArrayList<Span> ();
+            body.set_spans (empty_spans);
+            return;
+        }
+
+        body.set_visible (true);
+
         string safe_name = Markup.escape_text (post.name);
         string safe_date = Markup.escape_text (post.date);
         string id_part = (post.id != "")
@@ -335,6 +619,7 @@ public class RessView : Adw.NavigationPage {
     // 最初の読み込み
     private async void init_load () {
         if (initialized) {
+            reload (true);
             return;
         }
 
@@ -388,6 +673,8 @@ public class RessView : Adw.NavigationPage {
 
                 if (header != null && body != null) {
                     set_post_widgets (post, header, body);
+                    apply_ng_visibility_to_rowbox (post, box);
+        bool ng = is_post_ng_cached (post);
                     // span の signal は生成時に1回だけ繋いでいるので、そのまま使える
                 }
 
@@ -474,6 +761,12 @@ public class RessView : Adw.NavigationPage {
 
             // 自分の書き込みを検索してインデックスを振る+振られたものを保持+リプライも見る
             mark_posthist ();
+
+
+            // NG (ngtext) ルールを読み込み＆キャッシュ
+            load_ngtext_rules_for_current_board ();
+            rebuild_ng_mask_cache_for_all_posts ();
+
 
             if (old_count == 0) {
                 // 初回
@@ -1453,7 +1746,8 @@ public class RessView : Adw.NavigationPage {
         var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
         var popup = new ng_sub (window, g_app, mode, -1, u, text);
         popup.submitted.connect (() => {
-
+            // NG 追加/更新後は表示だけ再読み込み
+            this.reload.begin (true);
         });
         popup.present ();
     }
@@ -1512,3 +1806,4 @@ public class RessView : Adw.NavigationPage {
         }
     }
 }
+
