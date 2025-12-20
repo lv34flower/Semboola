@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<!-- Created with Cambalache 0.96.1 -->
+<!-- Created with Cambalache 0.96.3 -->
 <interface>
   <!-- interface-name thread_row.ui -->
   <requires lib="gtk" version="4.0"/>
@@ -23,7 +23,7 @@
       </object>
     </child>
     <child>
-      <object class="GtkBox">
+      <object class="GtkBox" id="subbox">
         <child>
           <object class="GtkLabel" id="dtime">
             <property name="css-classes">dim-label</property>

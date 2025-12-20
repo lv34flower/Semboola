@@ -126,7 +126,8 @@ public class thread_hist : Adw.NavigationPage {
                     new DateTime.from_unix_local (int64.parse (r["last_touch_date"])),
                     -1,
                     int.parse (r["current_res_count"]),
-                    r["board_url"] + r["bbs_id"] + "/dat/" +r["thread_id"] + ".dat"
+                    r["board_url"] + r["bbs_id"] + "/dat/" +r["thread_id"] + ".dat",
+                    true
                 ));
             }
 

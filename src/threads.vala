@@ -43,6 +43,11 @@ public class ThreadsView : Adw.NavigationPage {
     private SimpleActionGroup page_actions;
     private SimpleAction bookmark_board_action;
 
+    private AhoMatcher ng_aho = new AhoMatcher ();
+    private Gee.ArrayList<Regex> ng_regex = new Gee.ArrayList<Regex> ();
+    // NG判定キャッシュ
+    private Gee.HashMap<uint, bool> ng_mask_cache = new Gee.HashMap<uint, bool> ();
+
     [GtkChild]
     unowned Gtk.ListView listview;
 
@@ -113,6 +118,12 @@ public class ThreadsView : Adw.NavigationPage {
             t.bind_property (
                 "read",
                 row.unread,
+                "visible",
+                BindingFlags.SYNC_CREATE
+            );
+            t.bind_property (
+                "visible",
+                row.subbox,
                 "visible",
                 BindingFlags.SYNC_CREATE
             );
@@ -193,6 +204,67 @@ public class ThreadsView : Adw.NavigationPage {
         copy_store ();
     }
 
+    private void load_ngtext_rules_for_current_board () {
+        ng_aho.clear ();
+        ng_regex.clear ();
+        ng_mask_cache.clear ();
+
+        string board_u = "";
+        try { board_u = Board.build_board_url (url); } catch { board_u = ""; }
+
+        try {
+            Db.DB db = new Db.DB ();
+
+            // enable=1 の ID/NAME/WORD をまとめて取得（hide/chain は無視）
+            var rows = db.query ("""
+                SELECT text, type, is_regex, board
+                  FROM ngtext
+                 WHERE enable != 0
+                   AND type = ?1
+                   AND (board = 'ALL' OR board = ?2)
+                 ORDER BY rowid ASC
+            """, {
+                ((int) NgMode.THREAD).to_string (),
+                board_u
+            });
+
+            foreach (var r in rows) {
+                string t = r["text"];
+                if (t == null || t == "")
+                    continue;
+
+                int type = int.parse (r["type"]);
+                bool is_regex = (r["is_regex"] != null && r["is_regex"] != "0");
+
+                if (is_regex) {
+                    try {
+                        var rx = new Regex (t, RegexCompileFlags.OPTIMIZE);
+                        ng_regex.add (rx);
+                    } catch {
+                        // 正規表現が壊れてたら無視
+                    }
+                } else {
+                    ng_aho.add_pattern (t);
+
+                }
+            }
+        } catch (Error e) {
+            win.show_error_toast (e.message);
+        }
+    }
+
+    private bool is_ng_post_slow (string title) {
+        if (title != null && title != "") {
+            if (ng_aho.match (title))
+                return true;
+            foreach (var rx in ng_regex) {
+                try { if (rx.match (title)) return true; } catch {}
+            }
+        }
+
+        return false;
+    }
+
     // bookmark状態の確認
     private async void reload_bookmark() {
         Db.DB db = new Db.DB();
@@ -220,16 +292,32 @@ public class ThreadsView : Adw.NavigationPage {
 
             var list = yield client.fetch_subject_async(board);  // 非同期
 
+            // NG (ngtext) ルールを読み込み＆キャッシュ
+            load_ngtext_rules_for_current_board ();
+
             if (list.length() > 0) {
                 store_all.remove_all ();
                 foreach (var r in list) {
-                    store_all.append (new ThreadRow.ThreadsItem (
-                        r.title,
-                        r.creation_datetime_local (),
-                        r.ikioi_per_hour_now (),
-                        r.count,
-                        r.dat_url
-                    ));
+                    if (is_ng_post_slow (r.title)) {
+                        // NG
+                        store_all.append (new ThreadRow.ThreadsItem (
+                            _("Blocked"),
+                            r.creation_datetime_local (),
+                            r.ikioi_per_hour_now (),
+                            r.count,
+                            "",
+                            false
+                        ));
+                    } else {
+                        store_all.append (new ThreadRow.ThreadsItem (
+                            r.title,
+                            r.creation_datetime_local (),
+                            r.ikioi_per_hour_now (),
+                            r.count,
+                            r.dat_url,
+                            true
+                        ));
+                    }
                 }
             } else {
                 win.show_error_toast (_("No threads found."));
@@ -364,6 +452,8 @@ public class ThreadsView : Adw.NavigationPage {
     // 行クリック
     private void on_row_activated (uint pos) {
         var item = (ThreadRow.ThreadsItem) store.get_item ((int)pos);
+
+        if (!item.visible) return;
 
         // 次の画面へ遷移
         var nav = this.get_ancestor (typeof (Adw.NavigationView)) as Adw.NavigationView;

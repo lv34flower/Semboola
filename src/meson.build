@@ -21,6 +21,7 @@ Semboola_sources = [
   'net/db.vala',
   'common/common.vala',
   'common/image.vala',
+  'common/aho.vala',
   'subui/ng_sub.vala',
   'subui/ng_row.vala',
 ]

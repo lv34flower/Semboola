@@ -66,7 +66,7 @@
                     <property name="active">True</property>
                     <property name="label" translatable="yes">Thread</property>
                     <property name="margin-end">6</property>
-                    <property name="width-request">100</property>
+                    <property name="width-request">60</property>
                     <signal name="toggled" handler="on_tab_change"/>
                   </object>
                 </child>
@@ -75,7 +75,7 @@
                     <property name="group">btn_thread</property>
                     <property name="label" translatable="yes">ID</property>
                     <property name="margin-end">6</property>
-                    <property name="width-request">100</property>
+                    <property name="width-request">60</property>
                     <signal name="toggled" handler="on_tab_change"/>
                   </object>
                 </child>
@@ -84,7 +84,7 @@
                     <property name="group">btn_thread</property>
                     <property name="label" translatable="yes">Name</property>
                     <property name="margin-end">6</property>
-                    <property name="width-request">100</property>
+                    <property name="width-request">60</property>
                     <signal name="toggled" handler="on_tab_change"/>
                   </object>
                 </child>
@@ -92,7 +92,7 @@
                   <object class="GtkToggleButton" id="btn_word">
                     <property name="group">btn_thread</property>
                     <property name="label" translatable="yes">Keyword</property>
-                    <property name="width-request">100</property>
+                    <property name="width-request">60</property>
                     <signal name="toggled" handler="on_tab_change"/>
                   </object>
                 </child>

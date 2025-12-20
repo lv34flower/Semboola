@@ -27,6 +27,7 @@ public class ThreadRow : Gtk.Box {
     [GtkChild] public unowned Gtk.Label spd;
     [GtkChild] public unowned Gtk.Label ress;
     [GtkChild] public unowned Gtk.Label unread;
+    [GtkChild] public unowned Gtk.Box subbox;
 
     public class ThreadsItem : Object {
         public string title { get; set; }
@@ -38,15 +39,17 @@ public class ThreadRow : Gtk.Box {
         public int favorite { get; set; }
         public int readcnt { get; set; default=0; }
         public bool read { get; set; default=false; }
+        public bool visible { get; set; default=true; }
 
         public string thread_id;
 
-        public ThreadsItem (string t, DateTime d, double s, int r, string u) {
+        public ThreadsItem (string t, DateTime d, double s, int r, string u, bool v) {
             title=t;
             dtime=d;
             spd=s;
             ress=r;
             url=u;
+            visible=v;
             thread_id=FiveCh.DatLoader.guess_threadkey_from_url (url);
         }
     }
