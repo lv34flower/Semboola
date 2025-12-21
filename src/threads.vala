@@ -48,6 +48,8 @@ public class ThreadsView : Adw.NavigationPage {
     // NG判定キャッシュ
     private Gee.HashMap<uint, bool> ng_mask_cache = new Gee.HashMap<uint, bool> ();
 
+    private GLib.List<FiveCh.SubjectEntry> list;
+
     [GtkChild]
     unowned Gtk.ListView listview;
 
@@ -143,7 +145,6 @@ public class ThreadsView : Adw.NavigationPage {
             win = this.get_root() as Semboola.Window;
             win.url = this.url;
             init_load.begin ();
-            load_threadlist.begin (); // 未読更新
         });
     }
 
@@ -187,6 +188,10 @@ public class ThreadsView : Adw.NavigationPage {
         // bookmark更新
         reload_bookmark();
         if (initialized) {
+            yield reload (true);
+            yield load_threadlist (); // 未読更新
+            copy_store ();
+
             return;
         }
 
@@ -284,13 +289,15 @@ public class ThreadsView : Adw.NavigationPage {
     }
 
     // スレ一覧更新(非同期で呼ぶこと)
-    private async void reload () {
+    private async void reload (bool view_only=false) {
         this.title=_("Loading...");
         try {
-            var board  = new FiveCh.Board(Board.guess_site_base_from_url (url), Board.guess_board_key_from_url (url));
-            var client = new FiveCh.Client();
+            if (!view_only) {
+                var board  = new FiveCh.Board(Board.guess_site_base_from_url (url), Board.guess_board_key_from_url (url));
+                var client = new FiveCh.Client();
 
-            var list = yield client.fetch_subject_async(board);  // 非同期
+                list = yield client.fetch_subject_async(board);  // 非同期
+            }
 
             // NG (ngtext) ルールを読み込み＆キャッシュ
             load_ngtext_rules_for_current_board ();
