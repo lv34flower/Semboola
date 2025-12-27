@@ -81,6 +81,11 @@ public class Semboola.Application : Adw.Application {
     }
 
     private void on_preferences_action () {
-        message ("app.preferences action activated");
+        var parent = this.active_window as Gtk.Window;
+        if (parent == null) return;
+
+        var prefs = new preferences ();
+
+        prefs.present (parent);
     }
 }

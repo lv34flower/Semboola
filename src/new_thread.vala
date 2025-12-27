@@ -179,4 +179,15 @@ public class new_thread : Adw.ApplicationWindow {
         }
 
     }
+
+    [GtkCallback]
+    private void on_image_click () {
+        var window = this.get_ancestor (typeof (Gtk.Window)) as Gtk.Window;
+        var popup = new img_upload (window, g_app);
+        popup.submitted.connect ((urls) => {
+            // 終わったらメッセージ追加
+            textbuffer.text = textbuffer.text + urls;
+        });
+        popup.present ();
+    }
 }

@@ -61,6 +61,12 @@
             <property name="margin-top">16</property>
             <child>
               <object class="GtkButton">
+                <property name="icon-name">folder-pictures-symbolic</property>
+                <signal name="clicked" handler="on_image_click"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton">
                 <property name="halign">end</property>
                 <property name="hexpand">True</property>
                 <property name="label" translatable="yes">Cancel</property>

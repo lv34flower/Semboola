@@ -2,6 +2,7 @@ Semboola_sources = [
   'main.vala',
   'application.vala',
   'window.vala',
+  'preferences.vala',
   'ng.vala',
   'add_board.vala',
   'boards.vala',
@@ -19,11 +20,13 @@ Semboola_sources = [
   'cookie_confirm.vala',
   'net/fivech.vala',
   'net/db.vala',
+  'net/catbox.vala',
   'common/common.vala',
   'common/image.vala',
   'common/aho.vala',
   'subui/ng_sub.vala',
   'subui/ng_row.vala',
+  'subui/img_upload.vala',
 ]
 
 cc = meson.get_compiler('c')

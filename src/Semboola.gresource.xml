@@ -2,6 +2,7 @@
 <gresources>
   <gresource prefix="/jp/lv34/Semboola">
     <file preprocess="xml-stripblanks">window.ui</file>
+    <file preprocess="xml-stripblanks">preferences.ui</file>
     <file preprocess="xml-stripblanks">ng.ui</file>
     <file preprocess="xml-stripblanks">add_board.ui</file>
     <file preprocess="xml-stripblanks">boards.ui</file>
@@ -18,6 +19,7 @@
     <file preprocess="xml-stripblanks">shortcuts-dialog.ui</file>
     <file preprocess="xml-stripblanks">subui/ng_sub.ui</file>
     <file preprocess="xml-stripblanks">subui/ng_row.ui</file>
+    <file preprocess="xml-stripblanks">subui/img_upload.ui</file>
     <file>style.css</file>
   </gresource>
 </gresources>
