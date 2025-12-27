@@ -18,6 +18,6 @@
   <ui template-class="nglist" filename="ng.ui" sha256="ecc72a9696c56dbb2ee1044df4c95ad57373be8dd22645f96494d5debb035887"/>
   <ui template-class="ng_sub" filename="subui/ng_sub.ui" sha256="7a2be24b32016c8bfa74743a9fe98d7c9e87f7fa44f62c92e24bab7e17da112b"/>
   <ui template-class="ng_row" filename="subui/ng_row.ui" sha256="9c2ea14c193cc7ea873006f3a6f771e8b89cfcd89ba939895336e941e1187758"/>
-  <ui template-class="preferences" filename="preferences.ui" sha256="aeaa5dc9ee15c5b0cee3481737ded5e53d0bdb60b88234bdfa6a9d458073918e"/>
+  <ui template-class="preferences" filename="preferences.ui" sha256="62ddfcf9af916151d107fb4635c9101c0daa1f67c43f47ee4881ce1a65280763"/>
   <ui template-class="img_upload" filename="subui/img_upload.ui" sha256="9afd7f795ae2837424c61c81f5edba4b69a463eb11a20ad70b584a63fdd61e58"/>
 </cambalache-project>

@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Created with Cambalache 0.96.3 -->
 <interface>
-  <requires lib="gtk" version="4.18"/>
   <requires lib="libadwaita" version="1.6"/>
   <template class="preferences" parent="AdwPreferencesDialog">
     <child>
@@ -10,12 +9,6 @@
           <object class="AdwPreferencesGroup">
             <property name="description" translatable="yes"/>
             <property name="separate-rows">True</property>
-            <child>
-              <object class="AdwEntryRow" id="row_imgclientid">
-                <property name="title" translatable="yes">Imgur Client ID</property>
-                <property name="visible">False</property>
-              </object>
-            </child>
             <child>
               <object class="AdwEntryRow" id="row_useragent">
                 <property name="title">User-Agent</property>

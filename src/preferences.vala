@@ -21,14 +21,10 @@
 [GtkTemplate (ui = "/jp/lv34/Semboola/preferences.ui")]
 public class preferences : Adw.PreferencesDialog {
 
-    [GtkChild] private unowned Adw.EntryRow row_imgclientid;
     [GtkChild] private unowned Adw.EntryRow row_useragent;
 
     public preferences () {
         Object ();
-
-        g_settings.bind ("img-client-id", row_imgclientid, "text",
-                       GLib.SettingsBindFlags.DEFAULT);
 
         g_settings.bind ("user-agent", row_useragent, "text",
                        GLib.SettingsBindFlags.DEFAULT);
