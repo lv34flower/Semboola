@@ -6,8 +6,6 @@ namespace FiveCh {
 
     // アプリケーション内共通の変数
     public string cookie;  // cookie.txtのパス
-    string ua;  // UAのパス
-    string ua_text = null; // uaの内容
     Session g_session;
     CookieJar g_cookiejar;
     // ----------------------------
@@ -1220,27 +1218,7 @@ namespace FiveCh {
         }
     }
 
-    // 1回だけ読み込みます。UAをファイルから取得
-    void set_default_ua () {
-        if (ua_text == null) {
-            try {
-                FileUtils.get_contents (ua, out ua_text);
-            } catch (FileError e) {
-                ua_text = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
-                // FileError.NOENT
-                if (e.code == FileError.NOENT) {
-                    try {
-                        FileUtils.set_contents (ua, ua_text);
-                    } catch (FileError e2) {
-                    }
-                } else {
-                }
-            }
-        }
-        ua_text = ua_text.chomp ();
-    }
-
     string default_browser_ua () {
-        return ua_text;
+        return g_settings.get_string ("user-agent");
     }
 }

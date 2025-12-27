@@ -24,6 +24,7 @@ using GLib;
 
 const string APP_ID = "jp.lv34.Semboola";
 Semboola.Application g_app;  // GLOBAL.
+GLib.Settings g_settings;
 
 int main (string[] args) {
     Intl.bindtextdomain (Config.GETTEXT_PACKAGE, Config.LOCALEDIR);
@@ -34,6 +35,8 @@ int main (string[] args) {
     var app = new Adw.Application (APP_ID, ApplicationFlags.FLAGS_NONE);
     var settings = Gtk.Settings.get_default ();
     settings.gtk_icon_theme_name = "Adwaita";
+
+    g_settings = new GLib.Settings (APP_ID);
 
     string data_dir = Environment.get_user_data_dir();
 
@@ -48,10 +51,7 @@ int main (string[] args) {
 
     // Fivech static変数の初期化
     FiveCh.cookie = Path.build_filename (data_dir, "cookies.txt");
-    FiveCh.ua = Path.build_filename (data_dir, "User-Agent.txt");
-    FiveCh.set_default_ua ();
     FiveCh.g_session = new Soup.Session ();
-    //FiveCh.g_session.user_agent = FiveCh.default_browser_ua ();
 
     FiveCh.g_cookiejar = new Soup.CookieJarText (FiveCh.cookie, false);
 
