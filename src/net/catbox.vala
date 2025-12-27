@@ -31,6 +31,7 @@ public class CatboxClient : Object {
             var ct = info.get_content_type ();
             if (ct != null && ct.length > 0) content_type = ct;
         } catch (Error e) {
+
         }
 
         // Catbox API: reqtype=fileupload, (optional) userhash, fileToUpload :contentReference[oaicite:2]{index=2}
