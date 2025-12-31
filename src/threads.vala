@@ -62,7 +62,8 @@ public class ThreadsView : Adw.NavigationPage {
     [GtkChild]
     unowned Gtk.SearchEntry entry_search;
 
-
+    [GtkChild]
+    unowned Gtk.ScrolledWindow scrolled;
 
     public ThreadsView (string url, string name) {
         // Object(
@@ -389,11 +390,60 @@ public class ThreadsView : Adw.NavigationPage {
     }
 
     private void copy_store () {
-        store.remove_all ();
-        for (uint i = 0; i < store_all.get_n_items (); ++i) {
-            store.append (store_all.get_item (i));
+        var hadj = scrolled.get_hadjustment ();
+        var vadj = scrolled.get_vadjustment ();
+
+        // いまの位置を割合で保存
+        double old_max_x = Math.fmax (0.0, hadj.upper - hadj.page_size);
+        double old_max_y = Math.fmax (0.0, vadj.upper - vadj.page_size);
+
+        double rel_x = (old_max_x > 0.0) ? (hadj.value / old_max_x) : 0.0;
+        double rel_y = (old_max_y > 0.0) ? (vadj.value / old_max_y) : 0.0;
+
+        // store の更新は「一発」でやる（remove_all + append 連打より安定）
+        uint n = store_all.get_n_items ();
+        Object[] additions = new Object[n];
+        for (uint i = 0; i < n; i++) {
+            additions[i] = store_all.get_item (i);
         }
+        store.splice (0, store.get_n_items (), additions);
+
+        // upper が安定してからスクロールを戻す
+        double last_upper = -1.0;
+        int stable_ticks = 0;
+
+        scrolled.add_tick_callback ((w, clock) => {
+            // まだ計測途中なら upper が動くので待つ
+            double upper = vadj.upper;
+            double page  = vadj.page_size;
+
+            if (upper <= 0.0 || page <= 0.0)
+                return true;
+
+            if (Math.fabs (upper - last_upper) < 0.5) {
+                stable_ticks++;
+            } else {
+                stable_ticks = 0;
+                last_upper = upper;
+            }
+
+            // 2フレーム連続で upper がほぼ不変なら「確定」とみなす
+            if (stable_ticks < 2)
+                return true;
+
+            double max_x = Math.fmax (0.0, hadj.upper - hadj.page_size);
+            double max_y = Math.fmax (0.0, vadj.upper - vadj.page_size);
+
+            double nx = (rel_x * max_x).clamp (hadj.lower, max_x);
+            double ny = (rel_y * max_y).clamp (vadj.lower, max_y);
+
+            hadj.value = nx;
+            vadj.value = ny;
+
+            return false; // remove tick
+        });
     }
+
 
     private async void search (string target) {
         store.remove_all ();

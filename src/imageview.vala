@@ -66,6 +66,11 @@ public class imageview : Adw.NavigationPage {
 
             var texture = Gdk.Texture.for_pixbuf (pixbuf);
             picture.set_paintable (texture);
+            picture.halign = Gtk.Align.CENTER;
+            picture.valign = Gtk.Align.CENTER;
+            picture.hexpand = false;
+            picture.vexpand = false;
+
 
             // ズームの基準は「元のピクセルサイズ」
             zoom = 1.0;
@@ -80,14 +85,20 @@ public class imageview : Adw.NavigationPage {
             if (original_width <= 0 || original_height <= 0)
                 return;
 
-            int avail_w = scrolled.get_width ();
-            int avail_h = scrolled.get_height ();
+            scrolled.add_tick_callback ((widget, frame_clock) => {
+                if (initial_fit_done)
+                    return GLib.Source.REMOVE;
 
-            if (avail_w <= 0 || avail_h <= 0)
-                return;
+                int avail_w = widget.get_allocated_width ();
+                int avail_h = widget.get_allocated_height ();
 
-            fit_to_viewport (avail_w, avail_h);
-            initial_fit_done = true;
+                if (avail_w <= 0 || avail_h <= 0)
+                    return GLib.Source.CONTINUE;
+
+                fit_to_viewport (avail_w, avail_h);
+                initial_fit_done = true;
+                return GLib.Source.REMOVE;
+            });
         });
 
         // NavigationView に push されて画面に出る直前〜直後に呼ばれる
@@ -230,7 +241,7 @@ public class imageview : Adw.NavigationPage {
         picture.width_request = w;
         picture.height_request = h;
 
-        // ズームモードでは fit させたくないので NONE にしておくと分かりやすい
+        // ズームモードでは fit させたくないので CONTAIN にしておくと分かりやすい
         picture.content_fit = Gtk.ContentFit.CONTAIN;
     }
 
