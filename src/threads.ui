@@ -70,6 +70,13 @@
         <child>
           <object class="GtkActionBar">
             <child>
+              <object class="GtkToggleButton" id="button_filter">
+                <property name="has-frame">False</property>
+                <property name="icon-name">filter-symbolic</property>
+                <signal name="toggled" handler="on_filter_toggle"/>
+              </object>
+            </child>
+            <child>
               <object class="GtkButton" id="threads_btn_reload">
                 <property name="halign">end</property>
                 <property name="hexpand">True</property>

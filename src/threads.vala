@@ -57,6 +57,9 @@ public class ThreadsView : Adw.NavigationPage {
     unowned Gtk.ToggleButton button_search;
 
     [GtkChild]
+    unowned Gtk.ToggleButton button_filter;
+
+    [GtkChild]
     unowned Gtk.SearchBar bar_search;
 
     [GtkChild]
@@ -400,14 +403,25 @@ public class ThreadsView : Adw.NavigationPage {
         double rel_x = (old_max_x > 0.0) ? (hadj.value / old_max_x) : 0.0;
         double rel_y = (old_max_y > 0.0) ? (vadj.value / old_max_y) : 0.0;
 
-        // store の更新は「一発」でやる（remove_all + append 連打より安定）
-        uint n = store_all.get_n_items ();
-        Object[] additions = new Object[n];
-        for (uint i = 0; i < n; i++) {
-            additions[i] = store_all.get_item (i);
-        }
-        store.splice (0, store.get_n_items (), additions);
+        //「フィルタ付きコピー」
+        bool only_unread = button_filter.active;
 
+        // store の更新は「一発」でやる（remove_all + append 連打より安定）
+        var tmp = new Gee.ArrayList<Object> ();
+
+        for (uint i = 0; i < store_all.get_n_items (); i++) {
+            var item = store_all.get_item (i) as ThreadRow.ThreadsItem;
+            if (item == null) continue;
+
+            if (only_unread) {
+                if (item.unread < 1) continue;
+            }
+
+            tmp.add (item);
+        }
+
+        Object[] additions = tmp.to_array ();
+        store.splice (0, store.get_n_items (), additions);
         // upper が安定してからスクロールを戻す
         double last_upper = -1.0;
         int stable_ticks = 0;
@@ -539,5 +553,10 @@ public class ThreadsView : Adw.NavigationPage {
     [GtkCallback]
     private void on_search_toggle () {
         //search.begin ("");
+    }
+
+    [GtkCallback]
+    private void on_filter_toggle () {
+        copy_store ();
     }
 }

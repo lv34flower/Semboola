@@ -4,7 +4,7 @@
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
   <ui template-class="BoardsView" filename="boards.ui" sha256="1be72b9905498bcce56f6a32e9d994747bfaf60ebc3ef4da57faa980c66b4a05"/>
   <ui template-class="AddBoardWindow" filename="add_board.ui" sha256="41350e67ea88ca5b2936f3bcca94f23a1102797f7205a24b969c2ac1089d86df"/>
-  <ui template-class="ThreadsView" filename="threads.ui" sha256="67a62f655df54f0c9694b31168a4a2599ff9dac4942945c2c66c478658b34ac5"/>
+  <ui template-class="ThreadsView" filename="threads.ui" sha256="1fc358ebef7ae1b784d6a7b38a8d4165424a9947fe34c2648d3c098aa3b104bf"/>
   <ui template-class="ThreadRow" filename="thread_row.ui" sha256="da928d3d88bf2864f81539602f7ed4d40cd89798a4c04da00e7e7a7643dd82f6"/>
   <ui template-class="RessView" filename="ress.ui" sha256="ea7c53c5c9e4eb7aa205c1f0f6fdaec9866bbef3df5f9fb58afd816fc0480269"/>
   <ui template-class="new_thread" filename="new_thread.ui" sha256="ded6e122eae69d92a3424a5f4b4d11f53d05a456463a3108cb02d404ae5db313"/>
@@ -18,6 +18,6 @@
   <ui template-class="nglist" filename="ng.ui" sha256="ecc72a9696c56dbb2ee1044df4c95ad57373be8dd22645f96494d5debb035887"/>
   <ui template-class="ng_sub" filename="subui/ng_sub.ui" sha256="7a2be24b32016c8bfa74743a9fe98d7c9e87f7fa44f62c92e24bab7e17da112b"/>
   <ui template-class="ng_row" filename="subui/ng_row.ui" sha256="9c2ea14c193cc7ea873006f3a6f771e8b89cfcd89ba939895336e941e1187758"/>
-  <ui template-class="preferences" filename="preferences.ui" sha256="62ddfcf9af916151d107fb4635c9101c0daa1f67c43f47ee4881ce1a65280763"/>
-  <ui template-class="img_upload" filename="subui/img_upload.ui" sha256="9afd7f795ae2837424c61c81f5edba4b69a463eb11a20ad70b584a63fdd61e58"/>
+  <ui template-class="preferences" filename="preferences.ui" sha256="e82c23c07989e696c00680ccd738f26177b20ca1b71aab5443d32e6532ba6134"/>
+  <ui template-class="img_upload" filename="subui/img_upload.ui" sha256="d05de035a91b16d1ca5c5f8928cf5699b090dce6a3667680f6ab50f8581fe13f"/>
 </cambalache-project>
