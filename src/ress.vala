@@ -423,8 +423,8 @@ public class RessView : Adw.NavigationPage {
     // 左クリック
     private void on_row_left_clicked (ResRow.ResItem post, int row_index, int n_press) {
         if (n_press >= 2) {
-
-            win.show_error_toast ("test- dc");
+            // 普通は1回目でレスアンカー画面に移行してしまうが、一応つけておく
+            add.begin (row_index+1);
         } else {
             open_reply_tree_page (post.index);
         }

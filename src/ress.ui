@@ -108,7 +108,7 @@
           <object class="GtkPopoverMenu" id="context_popover">
             <property name="halign">start</property>
             <property name="has-arrow">False</property>
-            <property name="height-request">320</property>
+            <property name="height-request">240</property>
             <property name="menu-model">context_menu</property>
             <property name="vexpand">True</property>
           </object>
