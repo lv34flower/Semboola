@@ -78,9 +78,7 @@ public class CatboxClient : Object {
         try {
             url = yield upload_file_async (file);
         } catch (Error e) {
-            // 呼び出し側が Toast 等で出せるように、ここでは空返しせず例外扱いにしたいなら throw してください。
-            warning ("%s", e.message);
-            return "";
+            throw e;
         }
 
         sql = """
