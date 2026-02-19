@@ -1601,7 +1601,7 @@ public class RessView : Adw.NavigationPage {
         if (is_read || read == 0) {
             scroll_to_post (posts.size);
         } else {
-            if (read < res_count) return;
+            if (read > res_count) return;
             scroll_to_post (read);
             is_read = true;
         }
