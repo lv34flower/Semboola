@@ -54,6 +54,53 @@ public class RessView : Adw.NavigationPage {
     // post.index(1-start) -> NG判定キャッシュ
     private Gee.HashMap<uint, bool> ng_mask_cache = new Gee.HashMap<uint, bool> ();
 
+    private class ThumbnailJob : Object {
+        public string url { get; construct; }
+        public Gtk.Picture thumb { get; construct; }
+
+        public ThumbnailJob (string url, Gtk.Picture thumb) {
+            Object (url: url, thumb: thumb);
+        }
+    }
+
+    private Gee.ArrayQueue<ThumbnailJob> thumbnail_jobs = new Gee.ArrayQueue<ThumbnailJob> ();
+    private uint thumbnail_job_source_id = 0;
+
+    private void clear_thumbnail_jobs () {
+        thumbnail_jobs.clear ();
+
+        if (thumbnail_job_source_id != 0) {
+            Source.remove (thumbnail_job_source_id);
+            thumbnail_job_source_id = 0;
+        }
+    }
+
+    private void schedule_thumbnail_download (string image_url, Gtk.Picture thumb) {
+        thumbnail_jobs.offer (new ThumbnailJob (image_url, thumb));
+
+        if (thumbnail_job_source_id != 0)
+            return;
+
+        thumbnail_job_source_id = Idle.add_full (Priority.LOW, () => {
+            int budget = 2;
+
+            while (budget > 0 && !thumbnail_jobs.is_empty) {
+                var job = thumbnail_jobs.poll ();
+                if (job != null && job.thumb.get_root () != null) {
+                    imgcon.enqueue_image_download (job.url, job.thumb);
+                }
+                budget--;
+            }
+
+            if (thumbnail_jobs.is_empty) {
+                thumbnail_job_source_id = 0;
+                return false;
+            }
+
+            return true;
+        });
+    }
+
     private void load_ngtext_rules_for_current_board () {
         ng_word_aho.clear ();
         ng_name_aho.clear ();
@@ -340,14 +387,25 @@ public class RessView : Adw.NavigationPage {
 
     // Listboxクリック初期化
     private void setup_listbox_clicks (Gtk.ListBox box) {
+
         var click = new Gtk.GestureClick ();
         click.set_button (0);
+
+        double press_x = 0;
+        double press_y = 0;
+        click.pressed.connect ((n_press, x, y) => {
+            press_x = x;
+            press_y = y;
+        });
 
         click.released.connect ((n_press, x, y) => {
             if (suppress_row_click_once)
                 return;
             if (suppress_after_long) {
                 suppress_after_long = false;
+                return;
+            }
+            if (!common.is_tap_gesture (x - press_x, y - press_y)) {
                 return;
             }
 
@@ -363,7 +421,9 @@ public class RessView : Adw.NavigationPage {
 
             if (clicked_indexes.is_empty) {
                 // idx = idx;
-            } else {
+            } else if (clicked_indexes.size >= idx) {
+                print(clicked_indexes.size.to_string ());
+                print(" " + idx.to_string());
                 idx = (int) clicked_indexes[idx]-1;
             }
 
@@ -566,7 +626,6 @@ public class RessView : Adw.NavigationPage {
                 if (header != null && body != null) {
                     set_post_widgets (post, header, body);
                     apply_ng_visibility_to_rowbox (post, box);
-        bool ng = is_post_ng_cached (post);
                     // span の signal は生成時に1回だけ繋いでいるので、そのまま使える
                 }
 
@@ -584,7 +643,7 @@ public class RessView : Adw.NavigationPage {
 
         int i = 0;
         Idle.add (() => {
-            int chunk = 30;
+            int chunk = 15;
             for (int n = 0; n < chunk && i < posts.size; n++, i++) {
                 append_row_for_post (posts[i]);
             }
@@ -597,7 +656,7 @@ public class RessView : Adw.NavigationPage {
     private void rebuild_listbox_incremental_append_only () {
         int i = res_count;
         Idle.add (() => {
-            int chunk = 30;
+            int chunk = 15;
             for (int n = 0; n < chunk && i < posts.size; n++, i++) {
                 append_row_for_post (posts[i]);
             }
@@ -629,6 +688,8 @@ public class RessView : Adw.NavigationPage {
 
         // save_scroll_position ();
 
+        clear_thumbnail_jobs ();
+
         try {
             var cancellable = new Cancellable ();
             Gee.ArrayList<ResRow.ResItem> new_posts;
@@ -657,7 +718,9 @@ public class RessView : Adw.NavigationPage {
 
             // NG (ngtext) ルールを読み込み＆キャッシュ
             load_ngtext_rules_for_current_board ();
-            rebuild_ng_mask_cache_for_all_posts ();
+            // 初期表示高速化のため、全レス分のNG判定はここでは実施しない。
+            // 各行の描画時に is_post_ng_cached() で必要分だけ評価・キャッシュする。
+            ng_mask_cache.clear ();
 
 
             if (old_count == 0) {
@@ -1264,7 +1327,17 @@ public class RessView : Adw.NavigationPage {
         var header_click = new Gtk.GestureClick ();
         header_click.set_button (1);
 
+        double header_press_x = 0;
+        double header_press_y = 0;
+        header_click.pressed.connect ((n_press, x, y) => {
+            header_press_x = x;
+            header_press_y = y;
+        });
+
         header_click.released.connect ((n_press, x, y) => {
+            if (!common.is_tap_gesture (x - header_press_x, y - header_press_y)) {
+                return;
+            }
             consume_row_click_once ();
 
             var row = header.get_ancestor (typeof (Gtk.ListBoxRow)) as Gtk.ListBoxRow;
@@ -1337,7 +1410,7 @@ public class RessView : Adw.NavigationPage {
                     }
                 });
 
-                imgcon.enqueue_image_download (url, thumb);
+                schedule_thumbnail_download (url, thumb);
             }
 
             row_box.append (thumbs_box);
@@ -1345,6 +1418,9 @@ public class RessView : Adw.NavigationPage {
 
         var row = new Gtk.ListBoxRow ();
         row.set_child (row_box);
+
+        row.set_selectable (false);
+        row.set_focusable (false);
 
         return row;
     }
@@ -1437,6 +1513,11 @@ public class RessView : Adw.NavigationPage {
             return;
         }
         nav.push (new imageview (url, cache_path));
+    }
+
+    protected override void dispose () {
+        clear_thumbnail_jobs ();
+        base.dispose ();
     }
 
     private async void add (int index) {
@@ -1569,11 +1650,7 @@ public class RessView : Adw.NavigationPage {
 
     private void on_reply_activate () {
         int r;
-        if (clicked_indexes.is_empty) {
-            r = (int) right_clicked_row;
-        } else {
-            r = (int) clicked_indexes[(int) right_clicked_row - 1];
-        }
+        r = (int) right_clicked_row;
         add.begin (r);
     }
 
@@ -1594,11 +1671,7 @@ public class RessView : Adw.NavigationPage {
         }
 
         int r;
-        if (clicked_indexes.is_empty) {
-            r = (int) right_clicked_row;
-        } else {
-            r = (int) clicked_indexes[(int) right_clicked_row - 1];
-        }
+        r = (int) right_clicked_row;
 
         var p = posts[r - 1];
 
@@ -1698,4 +1771,3 @@ public class RessView : Adw.NavigationPage {
         }
     }
 }
-

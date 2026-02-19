@@ -3,6 +3,12 @@ using Gdk;
 
 
 namespace common {
+    public const double TAP_GESTURE_THRESHOLD_PX = 16.0;
+
+    public bool is_tap_gesture (double dx, double dy, double threshold = TAP_GESTURE_THRESHOLD_PX) {
+        return Math.fabs (dx) <= threshold && Math.fabs (dy) <= threshold;
+    }
+
     // クリップボードセット
     void copy_to_clipboard (string text) {
         var display = Display.get_default ();
@@ -187,5 +193,23 @@ namespace common {
 
         return "";
     }
+
+    private bool nav_is_in_interactive_transition (Adw.NavigationView nav) {
+        var swipeable = nav as Adw.Swipeable;
+        if (swipeable == null)
+            return false;
+
+        double p = swipeable.get_progress ();
+        double[] snaps = swipeable.get_snap_points ();
+
+        // snap 点にほぼ一致してれば「遷移してない」
+        const double EPS = 1e-6;
+        foreach (double s in snaps) {
+            if (Math.fabs (p - s) < EPS)
+                return false;
+        }
+        return true; // どの snap 点にも一致しない = スワイプ中
+    }
+
 
 }

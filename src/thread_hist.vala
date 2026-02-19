@@ -50,8 +50,17 @@ public class thread_hist : Adw.NavigationPage {
 
             // 行全体にクリックジェスチャを付与
             var click = new Gtk.GestureClick ();
+            double press_x = 0;
+            double press_y = 0;
+            click.pressed.connect ((n_press, x, y) => {
+                press_x = x;
+                press_y = y;
+            });
             click.released.connect ((n_press, x, y) => {
                 if (n_press == 1) {
+                    if (!common.is_tap_gesture (x - press_x, y - press_y)) {
+                        return;
+                    }
                     // 現在の行位置を使ってアクティベーション発火
                     listview.activate (list_item.position);
                 }
