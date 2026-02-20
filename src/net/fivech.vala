@@ -733,16 +733,52 @@ namespace FiveCh {
             return enc_key + "=" + enc_val;
         }
 
-        // Convert UTF-8 string to target charset raw bytes
+        // Convert UTF-8 string to target charset raw bytes.
+        // IMPORTANT: when target charset is SJIS/CP932, many Unicode chars (emoji, some symbols)
+        // cannot be represented. This function guarantees output by replacing any
+        // unconvertible codepoint with a numeric character reference like "&#12345;" (ASCII).
         private static uint8[] string_to_bytes (string s, string charset) throws Error {
-            size_t br = 0; size_t bw = 0;
-            // Convert returns raw bytes in 'string' container; use strlen to get length
-            string outbin = GLib.convert (s, -1, charset, "UTF-8", out br, out bw);
-            size_t n = (size_t) Posix.strlen (outbin); // stop at first NUL (none expected)
-            unowned uint8[] raw = (uint8[]) outbin.data;
-            uint8[] copy = new uint8[n];
-            for (size_t i = 0; i < n; i++) copy[i] = raw[i];
-            return copy;
+            // Validate charset early (so we don't silently loop forever on invalid names).
+            {
+                size_t br0 = 0; size_t bw0 = 0;
+                // empty string should always convert if charset is valid
+                GLib.convert ("", -1, charset, "UTF-8", out br0, out bw0);
+            }
+
+            var out = new GLib.ByteArray ();
+
+            int index = 0;
+            unichar ch;
+            while (s.get_next_char (ref index, out ch)) {
+                // 1 codepoint as UTF-8 string
+                var piece_sb = new StringBuilder ();
+                piece_sb.append_unichar (ch);
+                string piece = piece_sb.str;
+
+                bool converted = false;
+                for (int attempt = 0; attempt < 2 && !converted; attempt++) {
+                    try {
+                        size_t br = 0; size_t bw = 0;
+                        string bin = GLib.convert (piece, -1, charset, "UTF-8", out br, out bw);
+
+                        // NOTE: 'bin' may contain NUL; use bytes_written (bw) not strlen.
+                        // ByteArray.append expects a byte buffer, so append in one shot.
+                        uint8[] chunk = new uint8[(int) bw];
+                        unowned uint8* p = (uint8*) bin.data;
+                        for (int i = 0; i < (int) bw; i++) chunk[i] = p[i];
+                        out.append (chunk);
+                        converted = true;
+                    } catch (Error e) {
+                        // Retry once with ASCII fallback.
+                        piece = "&#%u;".printf ((uint) ch);
+                    }
+                }
+            }
+
+            // ByteArray.data is owned by ByteArray; copy to a plain uint8[]
+            uint8[] res = new uint8[out.len];
+            for (uint i = 0; i < out.len; i++) res[i] = out.data[i];
+            return res;
         }
 
         // Percent-encode arbitrary bytes for x-www-form-urlencoded (space -> '+', unreserved stays plain)
@@ -968,7 +1004,16 @@ namespace FiveCh {
             unichar ch;
 
             while (src.get_next_char (ref index, out ch)) {
-                // 絵文字など U+10000 以上だけエンティティにする
+                // 次が Variation Selector なら、ベース文字もまとめてエンティティ化
+                int peek = index;
+                unichar next;
+                if (src.get_next_char (ref peek, out next) && (next >= 0xFE00 && next <= 0xFE0F)) {
+                    sb.append_printf ("&#%d;&#%d;", (int) ch, (int) next);
+                    index = peek; // VS まで消費
+                    continue;
+                }
+
+                // それ以外は従来の条件
                 if (ch > 0xFFFF || (ch >= 0xFE00 && ch <= 0xFE0F)) {
                     sb.append_printf ("&#%d;", (int) ch);
                 } else {
