@@ -21,16 +21,28 @@
 
 public class ImageControl : Object {
 
-    public const int THUMB_WIDTH = 80;
-    public const int THUMB_HEIGHT = 80;
-    // 画像ダウンロードの並列上限
-    private const int MAX_PARALLEL_IMAGE_DOWNLOADS = 4;
+    public static int thumb_size () { return g_settings.get_int ("thumbnail-size"); }
+    // 後方互換のため旧定数名でもアクセス可能にする
+    public static int THUMB_WIDTH  { get { return thumb_size (); } }
+    public static int THUMB_HEIGHT { get { return thumb_size (); } }
+    private int max_parallel () { return g_settings.get_int ("max-parallel-downloads"); }
 
     // 待ち行列
     private Gee.Queue<ImageDownloadTask> image_download_queue = new Gee.LinkedList<ImageDownloadTask> ();
 
     // 現在動いているダウンロード数
     private int running_image_downloads = 0;
+
+    // インフライト DL をキャンセルするための Cancellable
+    private Cancellable download_cancel = new Cancellable ();
+
+    // キューと実行中の DL を全てキャンセルする
+    public void cancel_all () {
+        download_cancel.cancel ();
+        download_cancel = new Cancellable ();
+        running_image_downloads = 0;
+        image_download_queue.clear ();
+    }
 
     // 画像ダウンロードタスク
     private class ImageDownloadTask : Object {
@@ -123,7 +135,7 @@ public class ImageControl : Object {
 
                 // HEAD でサイズチェック
                 var head_msg = new Soup.Message ("HEAD", url);
-                yield client.session.send_async (head_msg, Priority.DEFAULT, null);
+                yield client.session.send_async (head_msg, Priority.DEFAULT, download_cancel);
 
                 if (head_msg.get_status () != Soup.Status.OK) {
                     // HEAD でエラーなら諦める
@@ -136,7 +148,7 @@ public class ImageControl : Object {
                 // Content-Length が 0以下（不明or0）または上限超えなら捨てる
                 // force==trueなら捨てない
                 if (!force) {
-                    if (content_length <= 0 || content_length > 1 * 1024 * 1024) {
+                    if (content_length <= 0 || content_length > (int64) g_settings.get_int ("image-size-limit-kb") * 1024) {
                         // ここで return すればサムネ無しで終わり
                         return;
                     }
@@ -144,7 +156,7 @@ public class ImageControl : Object {
 
                 var msg = new Soup.Message ("GET", url);
 
-                var bytes = yield client.session.send_and_read_async (msg, Priority.DEFAULT, null);
+                var bytes = yield client.session.send_and_read_async (msg, Priority.DEFAULT, download_cancel);
                 if (msg.get_status () != Soup.Status.OK)
                     return;
 
@@ -189,8 +201,9 @@ public class ImageControl : Object {
             return src;
 
         // 目標サイズに収まるようにスケール
-        double scale_w = (double) THUMB_WIDTH / (double) w;
-        double scale_h = (double) THUMB_HEIGHT / (double) h;
+        int ts = thumb_size ();
+        double scale_w = (double) ts / (double) w;
+        double scale_h = (double) ts / (double) h;
         double scale = Math.fmin (1.0, Math.fmin (scale_w, scale_h)); // 拡大はしない
 
         int new_w = (int) Math.round (w * scale);
@@ -211,7 +224,7 @@ public class ImageControl : Object {
     // キューを処理して、同時実行数の上限まで流す
     public void process_image_download_queue () {
         // すでに上限まで動いていたら何もしない
-        while (running_image_downloads < MAX_PARALLEL_IMAGE_DOWNLOADS &&
+        while (running_image_downloads < max_parallel () &&
                !image_download_queue.is_empty) {
 
             var task = image_download_queue.poll ();

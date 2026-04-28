@@ -68,6 +68,7 @@ public class RessView : Adw.NavigationPage {
 
     private void clear_thumbnail_jobs () {
         thumbnail_jobs.clear ();
+        imgcon.cancel_all ();
 
         if (thumbnail_job_source_id != 0) {
             Source.remove (thumbnail_job_source_id);
@@ -716,11 +717,25 @@ public class RessView : Adw.NavigationPage {
             mark_posthist ();
 
 
-            // NG (ngtext) ルールを読み込み＆キャッシュ
+            // NG (ngtext) ルールを読み込み
             load_ngtext_rules_for_current_board ();
-            // 初期表示高速化のため、全レス分のNG判定はここでは実施しない。
-            // 各行の描画時に is_post_ng_cached() で必要分だけ評価・キャッシュする。
             ng_mask_cache.clear ();
+
+            // AhoMatcher の build() をメインスレッドで完了させてからスレッドに渡す
+            ng_word_aho.match ("");
+            ng_name_aho.match ("");
+
+            // バックグラウンドで全レス分の NG 判定を事前計算
+            var posts_snap = posts;
+            var pre_cache = new Gee.HashMap<uint, bool> ();
+            SourceFunc ng_resume = reload.callback;
+            new Thread<void> ("ng-precompute", () => {
+                foreach (var p in posts_snap)
+                    pre_cache[p.index] = is_ng_post_slow (p);
+                Idle.add ((owned) ng_resume);
+            });
+            yield;
+            ng_mask_cache = pre_cache;
 
 
             if (old_count == 0) {
@@ -1382,7 +1397,7 @@ public class RessView : Adw.NavigationPage {
             thumbs_box.column_spacing = 4;
             thumbs_box.valign = Gtk.Align.START;
             thumbs_box.halign = Gtk.Align.START;
-            thumbs_box.max_children_per_line = 3; // 1行あたりのサムネ数上限
+            thumbs_box.max_children_per_line = g_settings.get_int ("max-thumbnails-per-row");
 
             foreach (var url in image_urls) {
                 var thumb = new Gtk.Picture ();

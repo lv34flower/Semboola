@@ -5,5 +5,30 @@
 			<default>'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) QtWebEngine/6.10.0 Chrome/134.0.0.0 Safari/537.36'</default>
 			<summary>User Agent</summary>
 		</key>
+		<key name="thumbnail-size" type="i">
+			<default>80</default>
+			<range min="32" max="256"/>
+			<summary>サムネイルサイズ (px)</summary>
+		</key>
+		<key name="max-parallel-downloads" type="i">
+			<default>4</default>
+			<range min="1" max="16"/>
+			<summary>並列画像ダウンロード数の上限</summary>
+		</key>
+		<key name="image-size-limit-kb" type="i">
+			<default>1024</default>
+			<range min="64" max="10240"/>
+			<summary>画像ダウンロードサイズ上限 (KB)</summary>
+		</key>
+		<key name="max-thumbnails-per-row" type="i">
+			<default>3</default>
+			<range min="1" max="10"/>
+			<summary>レスごとのサムネイル列数</summary>
+		</key>
+		<key name="toast-timeout" type="i">
+			<default>3</default>
+			<range min="1" max="30"/>
+			<summary>トースト通知表示時間 (秒)</summary>
+		</key>
 	</schema>
 </schemalist>

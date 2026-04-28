@@ -18,6 +18,86 @@
             </child>
           </object>
         </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">画像</property>
+            <child>
+              <object class="AdwSpinRow" id="row_thumbnail_size">
+                <property name="title" translatable="yes">サムネイルサイズ (px)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">32</property>
+                    <property name="upper">256</property>
+                    <property name="step-increment">8</property>
+                    <property name="value">80</property>
+                  </object>
+                </property>
+                <property name="digits">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="row_max_thumbnails_per_row">
+                <property name="title" translatable="yes">1レスあたりのサムネイル列数</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">1</property>
+                    <property name="upper">10</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">3</property>
+                  </object>
+                </property>
+                <property name="digits">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="row_max_parallel_downloads">
+                <property name="title" translatable="yes">並列ダウンロード数の上限</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">1</property>
+                    <property name="upper">16</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">4</property>
+                  </object>
+                </property>
+                <property name="digits">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="row_image_size_limit_kb">
+                <property name="title" translatable="yes">画像サイズ上限 (KB)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">64</property>
+                    <property name="upper">10240</property>
+                    <property name="step-increment">64</property>
+                    <property name="value">1024</property>
+                  </object>
+                </property>
+                <property name="digits">0</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">表示</property>
+            <child>
+              <object class="AdwSpinRow" id="row_toast_timeout">
+                <property name="title" translatable="yes">トースト通知表示時間 (秒)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">1</property>
+                    <property name="upper">30</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">3</property>
+                  </object>
+                </property>
+                <property name="digits">0</property>
+              </object>
+            </child>
+          </object>
+        </child>
       </object>
     </child>
   </template>

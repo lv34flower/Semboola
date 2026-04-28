@@ -22,14 +22,21 @@
 public class preferences : Adw.PreferencesDialog {
 
     [GtkChild] private unowned Adw.EntryRow row_useragent;
+    [GtkChild] private unowned Adw.SpinRow row_thumbnail_size;
+    [GtkChild] private unowned Adw.SpinRow row_max_thumbnails_per_row;
+    [GtkChild] private unowned Adw.SpinRow row_max_parallel_downloads;
+    [GtkChild] private unowned Adw.SpinRow row_image_size_limit_kb;
+    [GtkChild] private unowned Adw.SpinRow row_toast_timeout;
 
     public preferences () {
         Object ();
 
-        g_settings.bind ("user-agent", row_useragent, "text",
-                       GLib.SettingsBindFlags.DEFAULT);
-
-
+        g_settings.bind ("user-agent",            row_useragent,              "text",  GLib.SettingsBindFlags.DEFAULT);
+        g_settings.bind ("thumbnail-size",         row_thumbnail_size,         "value", GLib.SettingsBindFlags.DEFAULT);
+        g_settings.bind ("max-thumbnails-per-row", row_max_thumbnails_per_row, "value", GLib.SettingsBindFlags.DEFAULT);
+        g_settings.bind ("max-parallel-downloads", row_max_parallel_downloads, "value", GLib.SettingsBindFlags.DEFAULT);
+        g_settings.bind ("image-size-limit-kb",    row_image_size_limit_kb,    "value", GLib.SettingsBindFlags.DEFAULT);
+        g_settings.bind ("toast-timeout",          row_toast_timeout,          "value", GLib.SettingsBindFlags.DEFAULT);
     }
 
 }

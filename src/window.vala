@@ -106,7 +106,7 @@ public class Semboola.Window : Adw.ApplicationWindow {
     // エラー表示
     public void show_error_toast (string message) {
         var t = new Adw.Toast (message);
-        t.set_timeout (3); // 秒
+        t.set_timeout (g_settings.get_int ("toast-timeout"));
 
         // 重要度を上げたいなら（キューで優先されます）
         t.set_priority (Adw.ToastPriority.HIGH);

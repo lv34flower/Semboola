@@ -1036,6 +1036,9 @@ namespace FiveCh {
 
         private string full_text;
 
+        private static GLib.Regex? _bold_safe_rx = null;
+        private static GLib.Regex? _tag_rx = null;
+
         /**
           * URL または dat URL から Board / threadkey を推定して1回分の DAT を取得。
           */
@@ -1059,7 +1062,17 @@ namespace FiveCh {
             // 全体を一気に読む
             var chunk = yield client.fetch_dat_async (board, threadkey, -1, cancellable);
             full_text = chunk.text;
-            return parse_dat_text (chunk.text);
+
+            // UI スレッドをブロックしないようバックグラウンドスレッドでパース
+            string text_snapshot = chunk.text;
+            Gee.ArrayList<ResRow.ResItem> result = new Gee.ArrayList<ResRow.ResItem> ();
+            SourceFunc resume = load_from_url_async.callback;
+            new Thread<void> ("dat-parse", () => {
+                result = parse_dat_text (text_snapshot);
+                Idle.add ((owned) resume);
+            });
+            yield;
+            return result;
         }
 
         public static string? guess_threadkey_from_url (string url) {
@@ -1097,8 +1110,10 @@ namespace FiveCh {
             var lines = text.split ("\n");
             uint idx = 1;
 
-            var regex = new GLib.Regex("<(?!/?b>)[^>]+>");
-            var tag_rx = new GLib.Regex ("<[^>]+>");
+            if (_bold_safe_rx == null) _bold_safe_rx = new GLib.Regex ("<(?!/?b>)[^>]+>");
+            if (_tag_rx == null)       _tag_rx       = new GLib.Regex ("<[^>]+>");
+            var regex  = _bold_safe_rx;
+            var tag_rx = _tag_rx;
             foreach (var raw_line in lines) {
                 var line = raw_line.strip ();
                 if (line.length == 0) continue;
